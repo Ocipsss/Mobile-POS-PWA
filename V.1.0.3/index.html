@@ -12,16 +12,17 @@
     <script src="lib/vue.js"></script>
     <script src="lib/dexie.min.js"></script>
     <script src="lib/unocss.js"></script>
-    <!-- ERUDA -->
     
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
+    <script>eruda.init();</script>
 
-    <!-- END-ERUDA -->
+    <style>
+        [v-cloak] { display: none; }
+    </style>
 </head>
 <body>
 
-<div id="app">
+<div id="app" v-cloak>
     <sidebar-nav 
         :groups="menuGroups" 
         :active-page="activePage" 
@@ -29,52 +30,134 @@
     </sidebar-nav>
 
     <div class="main-card" :class="{ 'is-open': isOpen }" @click="isOpen ? isOpen = false : null">
-        <header>
-            <button class="btn-burger" @click.stop="isOpen = !isOpen">
-                <i :class="isOpen ? 'ri-arrow-left-line' : 'ri-menu-3-line'"></i>
-            </button>
-            <div class="text-center">
-                <span class="text-[10px] font-bold text-gray-400 block uppercase tracking-tighter">Halaman</span>
-                <span class="text-sm font-bold text-gray-700">{{ activePage }}</span>
-            </div>
-            <button class="btn-burger"><i class="ri-user-add-line"></i></button>
-        </header>
-        <!-- -->
-        <main class="content-scroll">
-    <component 
-        :is="getComponent(activePage)" 
-        :cart="cart"
-        :page-name="activePage">
-    </component>
-</main>
+        
+        <header style="display: flex; flex-direction: column; gap: 10px; padding-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <button class="btn-burger" @click.stop="isOpen = !isOpen">
+                    <i :class="isOpen ? 'ri-arrow-left-line' : 'ri-menu-3-line'"></i>
+                </button>
 
+                <div class="text-center">
+                    <span v-if="selectedMember && activePage === 'Penjualan'" 
+                          style="font-size: 9px; font-weight: 800; color: #3b82f6; display: block; text-transform: uppercase; letter-spacing: 0.05em;">
+                          Pelanggan: {{ selectedMember.name }}
+                    </span>
+                    <span v-else style="font-size: 10px; font-weight: bold; color: #94a3b8; display: block; text-transform: uppercase;">
+                          Halaman
+                    </span>
+                    <span style="font-size: 14px; font-weight: bold; color: #334155;">{{ activePage }}</span>
+                </div>
+
+                <button class="btn-burger" @click="activePage === 'Penjualan' ? isMemberModalOpen = true : selectPage('Penjualan')">
+                    <i v-if="activePage === 'Penjualan'" 
+                       :class="selectedMember ? 'ri-user-heart-fill text-blue-500' : 'ri-user-search-line'"></i>
+                    <i v-else class="ri-shopping-cart-2-line text-blue-500"></i>
+                </button>
+            </div>
+
+            <div v-if="activePage === 'Penjualan'" style="position: relative; width: 100%;">
+                <global-search 
+                    v-model="globalSearchQuery" 
+                    placeholder="Cari & Tambah Produk..."
+                    @input="handleGlobalSearch">
+                </global-search>
+
+                <div v-if="searchResults.length > 0 && globalSearchQuery" 
+                     style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #eee; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 999; max-height: 250px; overflow-y: auto;">
+                    <div v-for="p in searchResults" :key="p.id" 
+                         @click="addBySearch(p)"
+                         style="padding: 12px; border-bottom: 1px solid #f8fafc; display: flex; align-items: center; gap: 10px;">
+                        <div style="flex: 1;">
+                            <div style="font-size: 12px; font-weight: bold;">{{ p.name }}</div>
+                            <div style="font-size: 10px; color: #2563eb; font-weight: 800;">Rp {{ p.price_sell.toLocaleString('id-ID') }}</div>
+                        </div>
+                        <div style="font-size: 10px; color: #94a3b8;">Stok: {{ p.qty }}</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="content-scroll">
+            <component 
+                :is="getComponent(activePage)" 
+                :cart="cart"
+                :page-name="activePage">
+            </component>
+        </main>
                 
-<!-- checkoutbar 1.2 -->
-        
         <div class="checkout-bar" v-if="activePage === 'Penjualan' && cart.length > 0">
-    <div class="flex justify-between items-center mb-2">
-        <span class="text-gray-500 text-sm">Total Belanja</span>
-        <span class="font-bold text-gray-800">Rp {{ totalBayar.toLocaleString('id-ID') }}</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="color: #64748b; font-size: 14px;">Total Belanja</span>
+                <span style="font-weight: bold; color: #1e293b;">Rp {{ totalBayar.toLocaleString('id-ID') }}</span>
+            </div>
+            <button class="btn-pay" @click="prosesBayar" style="width: 100%;">
+                BAYAR SEKARANG ({{ cart.length }} Item)
+            </button>
+        </div>
     </div>
-    <button class="btn-pay" @click="prosesBayar">
-        BAYAR SEKARANG ({{ cart.length }} Item)
-    </button>
-</div>
-<!-- end-checkoutbar 1.2 -->
-        
+
+    <div v-if="isMemberModalOpen" class="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 backdrop-blur-sm transition-opacity" @click.self="isMemberModalOpen = false">
+        <div class="bg-white w-full max-w-md rounded-t-[32px] p-6 animate-slide-up shadow-2xl overflow-hidden">
+            
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-lg font-black text-gray-800 uppercase tracking-tight">Pilih Pelanggan</h3>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Pilih untuk riwayat belanja</p>
+                </div>
+                <button @click="isMemberModalOpen = false" class="bg-gray-100 border-none w-10 h-10 rounded-full flex items-center justify-center">
+                    <i class="ri-close-line text-xl text-gray-500"></i>
+                </button>
+            </div>
+
+            <div class="mb-6">
+                <global-search 
+                    v-model="memberSearchQuery" 
+                    placeholder="Cari nama, ID, atau HP...">
+                </global-search>
+            </div>
+
+            <div class="max-h-[45vh] overflow-y-auto no-scrollbar flex flex-col gap-3 pb-4">
+                <div v-for="m in filteredMembers" :key="m.id" 
+                     @click="selectedMember = m; isMemberModalOpen = false" 
+                     class="p-4 border border-gray-100 rounded-2xl flex items-center gap-4 active:bg-blue-50 transition-all border-l-4 border-l-transparent active:border-l-blue-500 shadow-sm bg-white cursor-pointer">
+                    <div class="w-12 h-12 bg-gray-50 text-blue-600 rounded-2xl flex items-center justify-center font-black text-lg border border-gray-100">
+                        {{ m.name.charAt(0).toUpperCase() }}
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm font-black text-gray-800">{{ m.name }}</div>
+                        <div class="text-[10px] text-gray-500 font-bold">ID: #{{ m.id }} • {{ m.phone }}</div>
+                    </div>
+                    <div v-if="selectedMember && selectedMember.id === m.id" class="text-blue-500">
+                        <i class="ri-checkbox-circle-fill text-xl"></i>
+                    </div>
+                    <i v-else class="ri-arrow-right-s-line text-gray-300 text-xl"></i>
+                </div>
+
+                <div v-if="filteredMembers.length === 0" class="py-10 text-center opacity-40">
+                    <i class="ri-user-search-line text-4xl mb-2"></i>
+                    <p class="text-[10px] font-black uppercase tracking-widest">Pelanggan tidak ditemukan</p>
+                </div>
+
+                <button @click="selectPage('Data Member'); isMemberModalOpen = false" 
+                        class="w-full py-4 border-2 border-dashed border-gray-100 rounded-2xl text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mt-2 hover:bg-gray-50 transition-colors flex flex-col items-center gap-1">
+                    <i class="ri-user-add-line text-lg"></i>
+                    Kelola Data Pelanggan
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
 <script src="js/database.js"></script>
 <script src="js/routes.js"></script>
+<script src="components/GlobalSearch.js"></script>
 <script src="components/Layout.js"></script>
 <script src="components/Placeholder.js"></script>
 <script src="components/pages/Penjualan.js"></script>
-<script src="components/pages/StockMonitor.js"></script>
 <script src="components/pages/DaftarProduk.js"></script>
 <script src="components/pages/TambahProduk.js"></script>
 <script src="components/pages/KategoriProduk.js"></script>
-<script src="js/app.js"></script>
+<script src="components/pages/DataMember.js"></script> <script src="js/app.js"></script>
 
 </body>
 </html>

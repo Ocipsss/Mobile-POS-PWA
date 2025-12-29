@@ -1,35 +1,30 @@
 /* js/database.js */
-// v.1.2.0 - Struktur Database Sinar Pagi (Relasi memberId) //
+// v.1.3.0 - Update Schema: Metode Pembayaran & Status Tempo //
 
 const db = new Dexie("SinarPagiDB");
 
-db.version(6).stores({
-    // Produk: ++id (auto increment)
+// Gunakan .version(7) jika sebelumnya adalah v6
+db.version(7).stores({
+    // Produk: Data master barang
     products: '++id, name, code, category, price_modal, price_sell, qty, unit',
     
     // Kategori: Untuk pengelompokan produk
     categories: '++id, name',
     
-    // Transaksi: Mencatat history penjualan
-    // Menggunakan memberId sebagai relasi ke tabel members
-    transactions: '++id, date, total, items, memberId',
+    // Transaksi: Mencatat riwayat penjualan dengan detail pembayaran
+    // Tambahan: paymentMethod, amountPaid, change, status
+    transactions: '++id, date, total, items, memberId, paymentMethod, amountPaid, change, status',
     
-    // Members: Data pelanggan tetap
+    // Members: Data pelanggan
     members: '++id, name, phone, address',
     
     // Settings: Konfigurasi toko
     settings: 'id, storeName'
 });
 
-// Membuka database dan memberikan laporan di console
+// Membuka database
 db.open().then(() => {
-    console.log("Database Sinar Pagi Berhasil Diinisialisasi (v6)");
+    console.log("Database Sinar Pagi Berhasil Diinisialisasi (v7)");
 }).catch((err) => {
     console.error("Gagal menginisialisasi database:", err);
 });
-
-/* CATATAN: 
-   Jika data member tidak muncul setelah replace, buka Eruda Console dan ketik:
-   db.delete().then(() => location.reload()) 
-   (Hanya lakukan ini jika Anda bersedia menghapus data lama untuk reset struktur)
-*/

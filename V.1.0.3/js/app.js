@@ -36,6 +36,48 @@ const app = createApp({
             menuGroupsData.value = window.menuGroups || (typeof menuGroups !== 'undefined' ? menuGroups : []);
             // Tarik data member terbaru setiap kali aplikasi atau modal dibuka
             listMemberDB.value = await db.members.toArray();
+            // Di dalam setup() app.js:
+
+const prosesBayar = async (paymentData) => {
+    if (cart.value.length === 0) return;
+    
+    try {
+        const transactionPayload = {
+            date: new Date().toISOString(),
+            total: totalBayar.value,
+            memberId: selectedMember.value ? selectedMember.value.id : null,
+            items: JSON.parse(JSON.stringify(cart.value)),
+            paymentMethod: paymentData.method,
+            amountPaid: paymentData.method === 'cash' ? paymentData.paid : totalBayar.value,
+            change: paymentData.method === 'cash' ? paymentData.change : 0,
+            status: paymentData.method === 'tempo' ? 'hutang' : 'lunas'
+        };
+
+        await db.transactions.add(transactionPayload);
+
+        // Update stok produk
+        for (const item of cart.value) {
+            const product = await db.products.get(item.id);
+            if (product) {
+                await db.products.update(item.id, { 
+                    qty: product.qty - item.qty 
+                });
+            }
+        }
+        
+        alert(`Transaksi ${paymentData.method.toUpperCase()} Berhasil!`);
+        cart.value = []; 
+        selectedMember.value = null;
+    } catch (err) {
+        console.error(err);
+        alert("Gagal memproses transaksi");
+    }
+};
+
+// Pastikan di template index.html pada bagian <component :is="getComponent(activePage)">
+// Ditambahkan listener:
+// <component :is="getComponent(activePage)" :cart="cart" :selected-member="selectedMember" @checkout="prosesBayar">
+
         };
 
         onMounted(refreshData);

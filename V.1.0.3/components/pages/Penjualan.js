@@ -1,84 +1,85 @@
-// components/pages/Penjualan.js //
-// v1.6 - Slim Cart View (Sync with Header Search) //
-
 const PagePenjualan = {
-    props: ['cart'], // Menerima data cart dari app.js
-    setup(props) {
-        // Fungsi untuk menambah jumlah qty
-        const updateQty = (id, n) => {
-            const item = props.cart.find(i => i.id === id);
-            if (item) {
-                item.qty += n;
-                // Jika qty dikurangi sampai 0, hapus dari keranjang
-                if (item.qty <= 0) {
-                    const index = props.cart.indexOf(item);
-                    props.cart.splice(index, 1);
-                }
-            }
-        };
+    props: ['cart', 'selectedMember'], 
+    emits: ['checkout'],
+    setup(props, { emit }) {
+        const payMethod = Vue.ref('cash');
+        const cashAmount = Vue.ref(0);
+        
+        const totalBelanja = Vue.computed(() => {
+            return props.cart.reduce((sum, item) => sum + (item.price_sell * item.qty), 0);
+        });
 
-        // Fungsi hapus semua item
-        const clearCart = () => {
-            if (confirm("Kosongkan keranjang belanja?")) {
-                props.cart.length = 0;
+        const kembalian = Vue.computed(() => {
+            const change = cashAmount.value - totalBelanja.value;
+            return change > 0 ? change : 0;
+        });
+
+        const submitOrder = () => {
+            if (payMethod.value === 'cash' && cashAmount.value < totalBelanja.value) {
+                alert("Uang tunai tidak mencukupi!");
+                return;
             }
+            if (payMethod.value === 'tempo' && !props.selectedMember) {
+                alert("Metode TEMPO wajib memilih Pelanggan/Member terlebih dahulu!");
+                return;
+            }
+
+            emit('checkout', {
+                method: payMethod.value,
+                paid: cashAmount.value,
+                change: kembalian.value
+            });
+            
+            // Reset local state
+            cashAmount.value = 0;
         };
 
         const formatRupiah = (val) => "Rp " + (val || 0).toLocaleString('id-ID');
 
-        return { updateQty, clearCart, formatRupiah };
+        return { payMethod, cashAmount, totalBelanja, kembalian, submitOrder, formatRupiah };
     },
     template: `
         <div class="flex flex-col gap-4 pb-32">
-            
-            <div class="flex justify-between items-center px-1 mt-2">
-                <div>
-                    <span class="font-black text-gray-700 uppercase text-[10px] tracking-widest">Item Terpilih</span>
-                    <div class="text-[9px] text-gray-400 font-bold uppercase mt-0.5">{{ cart.length }} Produk dalam daftar</div>
+            <div v-for="item in cart" :key="item.id" class="bg-white p-3 rounded-2xl border border-gray-100 flex items-center justify-between">
+                <div class="flex gap-3 items-center">
+                    <div class="text-sm font-bold text-gray-800">{{ item.name }}</div>
                 </div>
-                <button v-if="cart.length > 0" @click="clearCart" class="text-[10px] text-red-500 font-black uppercase tracking-wider border-none bg-red-50 px-3 py-1.5 rounded-lg active:scale-95 transition-all">
-                    Hapus Semua
+                <div class="font-black text-blue-600 text-sm">{{ item.qty }} x {{ formatRupiah(item.price_sell) }}</div>
+            </div>
+
+            <div v-if="cart.length > 0" class="bg-white p-5 rounded-[2rem] border border-blue-100 shadow-sm mt-4">
+                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 block">Metode Pembayaran</label>
+                
+                <div class="grid grid-cols-3 gap-2 mb-4">
+                    <button @click="payMethod = 'cash'" :class="payMethod === 'cash' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-500'" class="py-3 rounded-xl border-none text-[10px] font-black transition-all">CASH</button>
+                    <button @click="payMethod = 'qris'" :class="payMethod === 'qris' ? 'bg-purple-600 text-white' : 'bg-gray-50 text-gray-500'" class="py-3 rounded-xl border-none text-[10px] font-black transition-all">QRIS</button>
+                    <button @click="payMethod = 'tempo'" :class="payMethod === 'tempo' ? 'bg-orange-500 text-white' : 'bg-gray-50 text-gray-500'" class="py-3 rounded-xl border-none text-[10px] font-black transition-all">TEMPO</button>
+                </div>
+
+                <div v-if="payMethod === 'cash'" class="animate-slide-up">
+                    <div class="flex flex-col gap-1 mb-3">
+                        <label class="text-[10px] font-black text-blue-500 uppercase">Uang Tunai</label>
+                        <input v-model.number="cashAmount" type="number" class="form-control !text-lg font-bold text-blue-600" placeholder="0">
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-blue-50 rounded-xl">
+                        <span class="text-[10px] font-bold text-blue-400 uppercase">Kembalian</span>
+                        <span class="text-lg font-black text-blue-600">{{ formatRupiah(kembalian) }}</span>
+                    </div>
+                </div>
+
+                <div v-if="payMethod === 'qris'" class="p-4 bg-purple-50 rounded-xl text-center animate-slide-up">
+                    <i class="ri-qr-code-line text-3xl text-purple-600"></i>
+                    <p class="text-[10px] font-bold text-purple-500 mt-1 uppercase">Pembayaran via QRIS / E-Wallet</p>
+                </div>
+
+                <div v-if="payMethod === 'tempo'" class="p-4 bg-orange-50 rounded-xl text-center animate-slide-up">
+                    <i class="ri-calendar-todo-line text-3xl text-orange-600"></i>
+                    <p class="text-[10px] font-bold text-orange-500 mt-1 uppercase">Hutang akan dicatat pada Member</p>
+                </div>
+
+                <button @click="submitOrder" class="w-full mt-5 bg-gray-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">
+                    Selesaikan Pesanan
                 </button>
             </div>
-
-            <div class="flex flex-col gap-3">
-                <div v-for="item in cart" :key="item.id" 
-                    class="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between animate-slide-up">
-                    
-                    <div class="flex gap-3 items-center min-w-0">
-                        <div class="w-12 h-12 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="ri-shopping-bag-3-line text-xl"></i>
-                        </div>
-                        
-                        <div class="min-w-0">
-                            <div class="text-sm font-bold text-gray-800 truncate leading-tight">{{ item.name }}</div>
-                            <div class="text-[11px] font-black text-blue-600 mt-0.5">{{ formatRupiah(item.price_sell) }}</div>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center gap-3 bg-gray-50 rounded-xl p-1 border border-gray-100 ml-2">
-                        <button @click="updateQty(item.id, -1)" class="w-8 h-8 flex items-center justify-center border-none bg-white rounded-lg shadow-sm active:bg-red-50">
-                            <i class="ri-subtract-line text-xs font-bold"></i>
-                        </button>
-                        
-                        <span class="text-sm font-black text-gray-700 w-4 text-center">{{ item.qty }}</span>
-                        
-                        <button @click="updateQty(item.id, 1)" class="w-8 h-8 flex items-center justify-center border-none bg-white rounded-lg shadow-sm text-blue-500 active:bg-blue-50">
-                            <i class="ri-add-line text-xs font-bold"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div v-if="cart.length === 0" class="flex flex-col items-center justify-center py-20 opacity-40">
-                <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <i class="ri-shopping-cart-line text-5xl text-gray-300"></i>
-                </div>
-                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-center text-gray-500 px-10 leading-relaxed">
-                    Keranjang Kosong<br>
-                    <span class="font-medium normal-case text-gray-400">Gunakan kolom pencarian di atas untuk menambah produk</span>
-                </p>
-            </div>
-
         </div>`
 };

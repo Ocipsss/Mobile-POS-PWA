@@ -3,6 +3,7 @@ root/:
    - icons/
    - img/
 - components/
+   - GlobalSearch.js
    - Layout.js
    - Placeholder.js
    - pages/
@@ -53,11 +54,3 @@ root/:
 - manifest.json
 - sw.js
 
-
-
-
-
-
-Saya ingin semuanya full replace, saya kasih semua file nya
-
-1. database.js
