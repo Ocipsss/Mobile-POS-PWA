@@ -1,5 +1,3 @@
-// js/app.js //
-// v.1.2.0 - Relasi memberId & Pencatatan Transaksi Pelanggan //
 const { createApp, ref, computed, onMounted, watch } = Vue;
 
 const app = createApp({
@@ -11,85 +9,40 @@ const app = createApp({
         'page-tambah-produk': PageTambahProduk,
         'page-kategori': PageKategoriProduk,     
         'page-daftar-produk': PageDaftarProduk,
-        'page-data-member': PageDataMember 
+        'page-data-member': PageDataMember ,
     },
     
     setup() {
         const isOpen = ref(false);
         const activePage = ref('Penjualan');
         const cart = ref([]); 
-        
         const menuGroupsData = ref([]);
+
+        // --- STATE PEMBAYARAN ---
+        const payMethod = ref('null');    // Default metode cash
+        const cashAmount = ref(null);     // Input nominal uang
 
         // --- STATE MEMBER ---
         const isMemberModalOpen = ref(false);
         const selectedMember = ref(null);
         const memberSearchQuery = ref(""); 
-        const listMemberDB = ref([]); // Data asli dari Dexie
+        const listMemberDB = ref([]);
 
         // --- STATE SEARCH PRODUK ---
         const globalSearchQuery = ref(""); 
         const searchResults = ref([]);    
 
-        // Fungsi Load Data Awal
         const refreshData = async () => {
-            menuGroupsData.value = window.menuGroups || (typeof menuGroups !== 'undefined' ? menuGroups : []);
-            // Tarik data member terbaru setiap kali aplikasi atau modal dibuka
+            menuGroupsData.value = window.menuGroups || [];
             listMemberDB.value = await db.members.toArray();
-            // Di dalam setup() app.js:
-
-const prosesBayar = async (paymentData) => {
-    if (cart.value.length === 0) return;
-    
-    try {
-        const transactionPayload = {
-            date: new Date().toISOString(),
-            total: totalBayar.value,
-            memberId: selectedMember.value ? selectedMember.value.id : null,
-            items: JSON.parse(JSON.stringify(cart.value)),
-            paymentMethod: paymentData.method,
-            amountPaid: paymentData.method === 'cash' ? paymentData.paid : totalBayar.value,
-            change: paymentData.method === 'cash' ? paymentData.change : 0,
-            status: paymentData.method === 'tempo' ? 'hutang' : 'lunas'
-        };
-
-        await db.transactions.add(transactionPayload);
-
-        // Update stok produk
-        for (const item of cart.value) {
-            const product = await db.products.get(item.id);
-            if (product) {
-                await db.products.update(item.id, { 
-                    qty: product.qty - item.qty 
-                });
-            }
-        }
-        
-        alert(`Transaksi ${paymentData.method.toUpperCase()} Berhasil!`);
-        cart.value = []; 
-        selectedMember.value = null;
-    } catch (err) {
-        console.error(err);
-        alert("Gagal memproses transaksi");
-    }
-};
-
-// Pastikan di template index.html pada bagian <component :is="getComponent(activePage)">
-// Ditambahkan listener:
-// <component :is="getComponent(activePage)" :cart="cart" :selected-member="selectedMember" @checkout="prosesBayar">
-
         };
 
         onMounted(refreshData);
 
-        // Pantau saat modal member dibuka, segarkan data dari database
         watch(isMemberModalOpen, async (newVal) => {
-            if (newVal) {
-                listMemberDB.value = await db.members.toArray();
-            }
+            if (newVal) listMemberDB.value = await db.members.toArray();
         });
 
-        // Filter member di modal berdasarkan input (Nama atau ID)
         const filteredMembers = computed(() => {
             const q = memberSearchQuery.value.toLowerCase();
             if (!q) return listMemberDB.value;
@@ -100,78 +53,79 @@ const prosesBayar = async (paymentData) => {
             );
         });
 
-        // Fungsi mencari produk untuk Header
-        const handleGlobalSearch = async () => {
-            if (!globalSearchQuery.value) {
-                searchResults.value = [];
-                return;
-            }
-            const query = globalSearchQuery.value.toLowerCase();
-            try {
-                const allProducts = await db.products.toArray();
-                searchResults.value = allProducts.filter(p => 
-                    (p.name && p.name.toLowerCase().includes(query)) || 
-                    (p.code && p.code.toLowerCase().includes(query))
-                ).slice(0, 5); 
-            } catch (err) {
-                console.error("Gagal cari produk:", err);
-            }
-        };
-
-        const addBySearch = (product) => {
-            const itemInCart = cart.value.find(item => item.id === product.id);
-            if (itemInCart) {
-                itemInCart.qty++;
-            } else {
-                cart.value.push({ ...product, qty: 1 });
-            }
-            globalSearchQuery.value = "";
-            searchResults.value = [];
-        };
-
-        const selectPage = (name) => {
-            activePage.value = name;
-            isOpen.value = false;
-        };
-
         const totalBayar = computed(() => {
             return cart.value.reduce((sum, item) => sum + (item.price_sell * item.qty), 0);
         });
 
+        // --- FUNGSI PROSES BAYAR (VERSI FIX) ---
         const prosesBayar = async () => {
             if (cart.value.length === 0) return;
-            
-            const konfirmasi = confirm(`Total: Rp ${totalBayar.value.toLocaleString('id-ID')}\nLanjutkan pembayaran?`);
+
+            // Validasi Tempo
+            if (payMethod.value === 'tempo' && !selectedMember.value) {
+                alert("Harap pilih Member terlebih dahulu untuk metode TEMPO!");
+                isMemberModalOpen.value = true;
+                return;
+            }
+
+            const total = totalBayar.value;
+            const paid = (payMethod.value === 'cash' && cashAmount.value) ? Number(cashAmount.value) : total;
+            const change = (paid - total) > 0 ? (paid - total) : 0;
+
+            const konfirmasi = confirm(`Total: Rp ${total.toLocaleString('id-ID')}\nMetode: ${payMethod.value.toUpperCase()}\nLanjutkan?`);
             
             if (konfirmasi) {
                 try {
                     await db.transactions.add({
                         date: new Date().toISOString(),
-                        total: totalBayar.value,
-                        // MEREKAM ID MEMBER (Relasi ke tabel members)
+                        total: total,
                         memberId: selectedMember.value ? selectedMember.value.id : null,
-                        items: JSON.parse(JSON.stringify(cart.value))
+                        items: JSON.parse(JSON.stringify(cart.value)),
+                        paymentMethod: payMethod.value,
+                        amountPaid: paid,
+                        change: payMethod.value === 'cash' ? change : 0,
+                        status: payMethod.value === 'tempo' ? 'hutang' : 'lunas'
                     });
 
-                    // Update stok produk
+                    // Update stok
                     for (const item of cart.value) {
                         const product = await db.products.get(item.id);
                         if (product) {
-                            await db.products.update(item.id, { 
-                                qty: product.qty - item.qty 
-                            });
+                            await db.products.update(item.id, { qty: product.qty - item.qty });
                         }
                     }
                     
                     alert("Pembayaran Berhasil!");
+                    // Reset State
                     cart.value = []; 
-                    selectedMember.value = null; // Reset member setelah transaksi
+                    selectedMember.value = null;
+                    cashAmount.value = null;
+                    payMethod.value = 'null';
                 } catch (err) {
                     console.error(err);
-                    alert("Gagal memproses transaksi");
+                    alert("Gagal simpan transaksi");
                 }
             }
         };
+
+        // --- LOGIKA SEARCH & NAV ---
+        const handleGlobalSearch = async () => {
+            if (!globalSearchQuery.value) { searchResults.value = []; return; }
+            const query = globalSearchQuery.value.toLowerCase();
+            const allProducts = await db.products.toArray();
+            searchResults.value = allProducts.filter(p => 
+                (p.name && p.name.toLowerCase().includes(query)) || (p.code && p.code.toLowerCase().includes(query))
+            ).slice(0, 5); 
+        };
+
+        const addBySearch = (product) => {
+            const itemInCart = cart.value.find(item => item.id === product.id);
+            itemInCart ? itemInCart.qty++ : cart.value.push({ ...product, qty: 1 });
+            globalSearchQuery.value = "";
+            searchResults.value = [];
+        };
+
+        const selectPage = (name) => { isOpen.value = false; activePage.value = name; };
         
         const getComponent = (pageName) => {
             const map = {
@@ -186,6 +140,7 @@ const prosesBayar = async (paymentData) => {
         
         return {
             isOpen, activePage, cart, totalBayar, prosesBayar, getComponent, selectPage,
+            payMethod, cashAmount, // Export ke template
             menuGroups: menuGroupsData,
             isMemberModalOpen, selectedMember, memberSearchQuery, filteredMembers,
             globalSearchQuery, searchResults, handleGlobalSearch, addBySearch          

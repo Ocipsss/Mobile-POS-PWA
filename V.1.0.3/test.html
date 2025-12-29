@@ -79,22 +79,15 @@
 
         <main class="content-scroll">
             <component 
-                :is="getComponent(activePage)" 
-                :cart="cart"
-                :page-name="activePage">
-            </component>
+    :is="getComponent(activePage)" 
+    :cart="cart"
+    :selected-member="selectedMember"
+    v-model:pay-method="payMethod"
+    v-model:cash-amount="cashAmount"
+    @checkout="prosesBayar"
+    :page-name="activePage">
+</component>
         </main>
-                
-        <div class="checkout-bar" v-if="activePage === 'Penjualan' && cart.length > 0">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span style="color: #64748b; font-size: 14px;">Total Belanja</span>
-                <span style="font-weight: bold; color: #1e293b;">Rp {{ totalBayar.toLocaleString('id-ID') }}</span>
-            </div>
-            <button class="btn-pay" @click="prosesBayar" style="width: 100%;">
-                BAYAR SEKARANG ({{ cart.length }} Item)
-            </button>
-        </div>
-    </div>
 
     <div v-if="isMemberModalOpen" class="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 backdrop-blur-sm transition-opacity" @click.self="isMemberModalOpen = false">
         <div class="bg-white w-full max-w-md rounded-t-[32px] p-6 animate-slide-up shadow-2xl overflow-hidden">
