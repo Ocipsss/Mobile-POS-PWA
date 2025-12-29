@@ -1,0 +1,47 @@
+konsep Glassmorphism
+
+
+pendekatan "Tab Bar & Sidebar Hybrid". Desain ini sangat populer di aplikasi Android modern (seperti Gojek/Grab) karena:
+​Navigasi Utama ada di bawah (Tab Bar) untuk akses cepat jempol.
+​Navigasi Sekunder ada di sidebar (Drawer) yang elegan untuk fitur manajemen.
+​Visual Clean: Menggunakan kartu-kartu minimalis agar data barang tidak terasa sesak di layar HP.
+
+menu "Off-canvas" yang muncul dari samping agar tidak memakan ruang layar HP yang terbatas.
+
+
+Modern Floating UI". Desain ini sangat populer di aplikasi Android modern (seperti Gojek/Grab) yang menggunakan elemen melayang (floating) dan sudut yang sangat membulat (extra rounded).
+
+
+Tab-Bar Minimalist". Desain ini sangat umum digunakan di aplikasi kasir premium karena navigasi utamanya selalu terlihat di bagian bawah layar (seperti Instagram atau Spotify), sehingga sangat cepat untuk berpindah menu tanpa perlu buka-tutup drawer.
+
+
+"Grid Dashboard Card". Desain ini sangat cocok jika aplikasi POS kamu nantinya memiliki banyak fitur tambahan (seperti manajemen supplier, hutang, inventaris, dll).
+​Konsepnya seperti Home Screen iPhone atau Windows Tile, di mana setiap menu direpresentasikan oleh kartu besar yang informatif.
+
+
+"Sidebar Floating Glass". Ini adalah perpaduan antara desain minimalis modern dengan efek kaca transparan yang sedang tren.
+​Bedanya dengan desain pertama, menu ini tidak menutupi seluruh layar, melainkan melayang di sisi kiri dengan sudut membulat yang sangat halus. Ini memberikan kesan aplikasi yang sangat ringan dan bersih.
+
+
+"Minimalist Side-Rail".
+​Ini adalah desain yang sangat populer di tablet atau HP layar besar (seperti seri Samsung Note/Ultra). Alih-alih menyembunyikan menu di balik burger, kita menyisakan sedikit "Rail" (garis icon) di sisi kiri yang selalu terlihat, namun bisa diperlebar menjadi menu penuh.
+​Ini sangat efisien jika kamu sering berpindah menu saat sedang melayani pelanggan yang ramai.
+
+
+"Card-Stack Narrative". Desain ini sangat cocok jika kamu ingin fokus pada User Experience (UX) yang bertumpuk.
+​Konsepnya: Konten utama (seperti daftar barang/transaksi) berada di atas kartu putih besar yang seolah-olah "menempel" di atas latar belakang aplikasi. Menu navigasinya tersembunyi secara elegan di belakang kartu tersebut.
+
+
+"Neumorphic Soft UI".
+​Desain ini sangat unik karena tidak menggunakan garis atau bayangan tajam, melainkan menggunakan permainan cahaya (shadow terang dan gelap) sehingga elemen terlihat seperti "timbul" atau "tenggelam" langsung dari permukaan casing HP kamu. Ini memberikan kesan aplikasi yang sangat organik dan menyatu dengan perangkat.
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,4 @@
+- mulai dokumentasi di v1.0.3
+
+- setiap halaman punya file tersendiri
+- search bar Daftar Produk done

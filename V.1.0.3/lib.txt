@@ -1,0 +1,55 @@
+root/:
+- assets/
+   - icons/
+   - img/
+- components/
+   - Layout.js
+   - Placeholder.js
+   - pages/
+      -ArusUang.js
+      -DaftarProduk.js
+      -DataKasir.js
+      -DataMember.js
+      -DataSuplier.js
+      -HargaGrosir.js
+      -HargaPaket.js
+      -KategoriProduk.js
+      -LabaRugiBersih.js
+      -LaporanBulanan.js
+      -LaporanHarian.js
+      -LaporanMingguan.js
+      -PaketProduk.js
+      -Pemasukan.js
+      -Pengaturan.js
+      -Pengeluaran.js
+      -Penjualan.js
+      -PiutangPenjualan.js
+      -StockMonitor.js
+      -TambahProduk.js
+      -TotalSaldo.js
+- css/
+   - style.css
+- js/
+   - app.js
+   - database.js
+   - routes.js
+- lib/
+   -dayjs.min.js v1.11.10
+   -dexie.min.js 
+   -font-awesome.min.css
+   -pico.min.css
+   -react-dom.js
+   -react.js
+   -remixicon.css
+   -remixicon.svg
+   -remixicon.ttf
+   -remixicon.woff
+   -remixicon.woff2
+   -tailwind.css
+   -unocss.js
+   -vue.js v3.5.26
+   -workbox-sw.js
+- index.html
+- manifest.json
+- sw.js
+
