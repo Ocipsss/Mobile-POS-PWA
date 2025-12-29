@@ -1,16 +1,17 @@
 // js/app.js //
-// v.1.1.1 //
-const { createApp, ref, computed } = Vue;
+// v.1.2.0 - Relasi memberId & Pencatatan Transaksi Pelanggan //
+const { createApp, ref, computed, onMounted, watch } = Vue;
 
 const app = createApp({
     components: {
-        'global-search': GlobalSearchComponent, // Gabungkan barisnya
+        'global-search': GlobalSearchComponent,
         'sidebar-nav': SidebarComponent,
         'page-placeholder': PlaceholderComponent,
         'page-penjualan': PagePenjualan,
         'page-tambah-produk': PageTambahProduk,
         'page-kategori': PageKategoriProduk,     
         'page-daftar-produk': PageDaftarProduk,
+        'page-data-member': PageDataMember 
     },
     
     setup() {
@@ -18,9 +19,73 @@ const app = createApp({
         const activePage = ref('Penjualan');
         const cart = ref([]); 
         
-        // State untuk Member
+        const menuGroupsData = ref([]);
+
+        // --- STATE MEMBER ---
         const isMemberModalOpen = ref(false);
         const selectedMember = ref(null);
+        const memberSearchQuery = ref(""); 
+        const listMemberDB = ref([]); // Data asli dari Dexie
+
+        // --- STATE SEARCH PRODUK ---
+        const globalSearchQuery = ref(""); 
+        const searchResults = ref([]);    
+
+        // Fungsi Load Data Awal
+        const refreshData = async () => {
+            menuGroupsData.value = window.menuGroups || (typeof menuGroups !== 'undefined' ? menuGroups : []);
+            // Tarik data member terbaru setiap kali aplikasi atau modal dibuka
+            listMemberDB.value = await db.members.toArray();
+        };
+
+        onMounted(refreshData);
+
+        // Pantau saat modal member dibuka, segarkan data dari database
+        watch(isMemberModalOpen, async (newVal) => {
+            if (newVal) {
+                listMemberDB.value = await db.members.toArray();
+            }
+        });
+
+        // Filter member di modal berdasarkan input (Nama atau ID)
+        const filteredMembers = computed(() => {
+            const q = memberSearchQuery.value.toLowerCase();
+            if (!q) return listMemberDB.value;
+            return listMemberDB.value.filter(m => 
+                m.name.toLowerCase().includes(q) || 
+                m.id.toString().includes(q) ||
+                (m.phone && m.phone.includes(q))
+            );
+        });
+
+        // Fungsi mencari produk untuk Header
+        const handleGlobalSearch = async () => {
+            if (!globalSearchQuery.value) {
+                searchResults.value = [];
+                return;
+            }
+            const query = globalSearchQuery.value.toLowerCase();
+            try {
+                const allProducts = await db.products.toArray();
+                searchResults.value = allProducts.filter(p => 
+                    (p.name && p.name.toLowerCase().includes(query)) || 
+                    (p.code && p.code.toLowerCase().includes(query))
+                ).slice(0, 5); 
+            } catch (err) {
+                console.error("Gagal cari produk:", err);
+            }
+        };
+
+        const addBySearch = (product) => {
+            const itemInCart = cart.value.find(item => item.id === product.id);
+            if (itemInCart) {
+                itemInCart.qty++;
+            } else {
+                cart.value.push({ ...product, qty: 1 });
+            }
+            globalSearchQuery.value = "";
+            searchResults.value = [];
+        };
 
         const selectPage = (name) => {
             activePage.value = name;
@@ -33,27 +98,32 @@ const app = createApp({
 
         const prosesBayar = async () => {
             if (cart.value.length === 0) return;
-            if (confirm(`Proses pembayaran sebesar Rp ${totalBayar.value.toLocaleString('id-ID')}?`)) {
+            
+            const konfirmasi = confirm(`Total: Rp ${totalBayar.value.toLocaleString('id-ID')}\nLanjutkan pembayaran?`);
+            
+            if (konfirmasi) {
                 try {
                     await db.transactions.add({
                         date: new Date().toISOString(),
                         total: totalBayar.value,
-                        // Menyimpan data member jika ada
-                        member: selectedMember.value ? JSON.parse(JSON.stringify(selectedMember.value)) : null,
+                        // MEREKAM ID MEMBER (Relasi ke tabel members)
+                        memberId: selectedMember.value ? selectedMember.value.id : null,
                         items: JSON.parse(JSON.stringify(cart.value))
                     });
 
+                    // Update stok produk
                     for (const item of cart.value) {
                         const product = await db.products.get(item.id);
                         if (product) {
-                            await db.products.update(item.id, {
-                                qty: product.qty - item.qty
+                            await db.products.update(item.id, { 
+                                qty: product.qty - item.qty 
                             });
                         }
                     }
-                    alert("Pembayaran Berhasil & Stok Terupdate!");
+                    
+                    alert("Pembayaran Berhasil!");
                     cart.value = []; 
-                    selectedMember.value = null; // Reset member setelah bayar
+                    selectedMember.value = null; // Reset member setelah transaksi
                 } catch (err) {
                     console.error(err);
                     alert("Gagal memproses transaksi");
@@ -66,33 +136,19 @@ const app = createApp({
                 'Penjualan': 'page-penjualan',
                 'Tambah Produk': 'page-tambah-produk',
                 'Kategori Produk': 'page-kategori',
-                'Daftar Produk': 'page-daftar-produk'
+                'Daftar Produk': 'page-daftar-produk',
+                'Data Member': 'page-data-member'
             };
             return map[pageName] || 'page-placeholder';
         };
         
-        // HANYA SATU RETURN DI AKHIR SETUP
         return {
-            isOpen,
-            activePage,
-            menuGroups,
-            selectPage,
-            cart,
-            totalBayar,
-            prosesBayar,
-            getComponent,
-            isMemberModalOpen, // WAJIB ADA DI SINI
-            selectedMember     // WAJIB ADA DI SINI
+            isOpen, activePage, cart, totalBayar, prosesBayar, getComponent, selectPage,
+            menuGroups: menuGroupsData,
+            isMemberModalOpen, selectedMember, memberSearchQuery, filteredMembers,
+            globalSearchQuery, searchResults, handleGlobalSearch, addBySearch          
         }
     }
 });
-// end-b.v.1.1.1
 
 app.mount('#app');
-
-// Service Worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(err => console.error(err));
-  });
-}

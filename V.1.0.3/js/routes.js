@@ -4,7 +4,7 @@
  * Berisi daftar kategori dan item menu yang tampil di sidebar.
  * Dipisahkan agar file utama app.js tetap bersih.
  */
-const menuGroups = [
+window.menuGroups = [
     { 
         title: 'Operasional', 
         items: [

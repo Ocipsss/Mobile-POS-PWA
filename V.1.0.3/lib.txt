@@ -53,3 +53,11 @@ root/:
 - manifest.json
 - sw.js
 
+
+
+
+
+
+Saya ingin semuanya full replace, saya kasih semua file nya
+
+1. database.js
