@@ -9,18 +9,32 @@ const app = createApp({
         'page-tambah-produk': PageTambahProduk,
         'page-kategori': PageKategoriProduk,     
         'page-daftar-produk': PageDaftarProduk,
-        'page-data-member': PageDataMember ,
+        'page-data-member': PageDataMember,
+        'page-pengaturan': PagePengaturan,
+        'page-laporan-harian': PageLaporanHarian,
+        'page-stock-monitor': PageStockMonitor,
+        'page-piutang-penjualan': PagePiutangPenjualan,
+        'page-dashboard':
+        PageDashboard,
+        'struk-nota': StrukNota, // Pastikan variabel StrukNota tersedia (panggil file-nya di index.html)
     },
     
     setup() {
+        // --- STATE NAVIGASI & DATA ---
         const isOpen = ref(false);
         const activePage = ref('Penjualan');
         const cart = ref([]); 
         const menuGroupsData = ref([]);
+        const storeSettings = ref({ 
+            storeName: 'SINAR PAGI', 
+            address: 'Jl. Raya No. 1', 
+            phone: '08123xxxx' 
+        });
 
-        // --- STATE PEMBAYARAN ---
-        const payMethod = ref('null');    // Default metode cash
-        const cashAmount = ref(null);     // Input nominal uang
+        // --- STATE PEMBAYARAN & STRUK ---
+        const payMethod = ref('null');
+        const cashAmount = ref(null);
+        const lastTransaction = ref(null); // Menyimpan data untuk struk
 
         // --- STATE MEMBER ---
         const isMemberModalOpen = ref(false);
@@ -32,6 +46,7 @@ const app = createApp({
         const globalSearchQuery = ref(""); 
         const searchResults = ref([]);    
 
+        // --- LOGIKA DATA ---
         const refreshData = async () => {
             menuGroupsData.value = window.menuGroups || [];
             listMemberDB.value = await db.members.toArray();
@@ -48,8 +63,7 @@ const app = createApp({
             if (!q) return listMemberDB.value;
             return listMemberDB.value.filter(m => 
                 m.name.toLowerCase().includes(q) || 
-                m.id.toString().includes(q) ||
-                (m.phone && m.phone.includes(q))
+                m.id.toString().includes(q)
             );
         });
 
@@ -57,11 +71,10 @@ const app = createApp({
             return cart.value.reduce((sum, item) => sum + (item.price_sell * item.qty), 0);
         });
 
-        // --- FUNGSI PROSES BAYAR (VERSI FIX) ---
+        // --- FUNGSI PROSES BAYAR (VERSI GABUNGAN) ---
         const prosesBayar = async () => {
             if (cart.value.length === 0) return;
 
-            // Validasi Tempo
             if (payMethod.value === 'tempo' && !selectedMember.value) {
                 alert("Harap pilih Member terlebih dahulu untuk metode TEMPO!");
                 isMemberModalOpen.value = true;
@@ -72,11 +85,11 @@ const app = createApp({
             const paid = (payMethod.value === 'cash' && cashAmount.value) ? Number(cashAmount.value) : total;
             const change = (paid - total) > 0 ? (paid - total) : 0;
 
-            const konfirmasi = confirm(`Total: Rp ${total.toLocaleString('id-ID')}\nMetode: ${payMethod.value.toUpperCase()}\nLanjutkan?`);
+            const konfirmasi = confirm(`Total: Rp ${total.toLocaleString('id-ID')}\nMetode: ${payMethod.value.toUpperCase()}\nLanjutkan & Cetak Struk?`);
             
             if (konfirmasi) {
                 try {
-                    await db.transactions.add({
+                    const transData = {
                         date: new Date().toISOString(),
                         total: total,
                         memberId: selectedMember.value ? selectedMember.value.id : null,
@@ -84,8 +97,14 @@ const app = createApp({
                         paymentMethod: payMethod.value,
                         amountPaid: paid,
                         change: payMethod.value === 'cash' ? change : 0,
-                        status: payMethod.value === 'tempo' ? 'hutang' : 'lunas'
-                    });
+                        status: payMethod.value === 'tempo' ? 'hutang' : 'lunas',
+                        kasir: localStorage.getItem('activeKasir') || 'Pemilik'
+                    };
+
+                    const id = await db.transactions.add(transData);
+                    
+                    // Simpan ke state untuk memicu munculnya komponen <struk-nota>
+                    lastTransaction.value = { id, ...transData };
 
                     // Update stok
                     for (const item of cart.value) {
@@ -95,7 +114,13 @@ const app = createApp({
                         }
                     }
                     
+                    // Delay sedikit agar Vue sempat merender struk sebelum jendela print muncul
+                    setTimeout(() => {
+                        window.print();
+                    }, 500);
+
                     alert("Pembayaran Berhasil!");
+                    
                     // Reset State
                     cart.value = []; 
                     selectedMember.value = null;
@@ -133,14 +158,21 @@ const app = createApp({
                 'Tambah Produk': 'page-tambah-produk',
                 'Kategori Produk': 'page-kategori',
                 'Daftar Produk': 'page-daftar-produk',
-                'Data Member': 'page-data-member'
+                'Data Member': 'page-data-member',
+                'Pengaturan': 'page-pengaturan',
+                'Laporan Harian': 'page-laporan-harian',
+                'Stock Monitor': 'page-stock-monitor',
+                'Piutang Penjualan':
+                'page-piutang-penjualan',
+                'Dashboard':
+                'page-dashboard',
             };
             return map[pageName] || 'page-placeholder';
         };
         
         return {
             isOpen, activePage, cart, totalBayar, prosesBayar, getComponent, selectPage,
-            payMethod, cashAmount, // Export ke template
+            payMethod, cashAmount, lastTransaction, storeSettings, // Penting untuk Struk
             menuGroups: menuGroupsData,
             isMemberModalOpen, selectedMember, memberSearchQuery, filteredMembers,
             globalSearchQuery, searchResults, handleGlobalSearch, addBySearch          

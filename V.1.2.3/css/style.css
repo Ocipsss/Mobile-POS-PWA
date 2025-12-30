@@ -258,4 +258,72 @@ header {
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 500ms;
 }
+
+/* CSS untuk layar (sembunyikan struk di layar) */
+.print-only {
+    display: none;
+}
+
+/* CSS khusus cetak */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .print-only, .print-only * {
+        visibility: visible;
+    }
+    .print-only {
+        display: block;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
+    @page {
+        size: 58mm auto; /* Menyesuaikan kertas printer thermal */
+        margin: 0;
+    }
+    .struk-wrapper {
+        width: 50mm; /* Sesuai area cetak printer 58mm */
+        padding: 2mm;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 10px;
+        line-height: 1.2;
+        color: #000;
+    }
+    .text-right { text-align: right; }
+    .struk-header { text-align: center; margin-bottom: 5px; }
+    .store-name { font-size: 14px; font-weight: bold; margin: 0; }
+    .struk-info { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 5px; }
+    .item-row { margin-bottom: 3px; }
+    .item-details { display: grid; grid-template-columns: 1fr 1fr; }
+    .total-row { display: grid; grid-template-columns: 1fr 1fr; font-weight: bold; margin-top: 2px; }
+    .struk-footer { text-align: center; margin-top: 10px; font-size: 8px; }
+    .struk-divider { text-align: center; margin: 2px 0; }
+}
+/* Animasi Perpindahan Halaman */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.3s ease-out;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateX(30px); /* Muncul dari kanan */
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-30px); /* Menghilang ke kiri */
+}
+
+/* Tambahan: Efek Bounce untuk Icon Keranjang agar lebih hidup */
+@keyframes cart-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+.animate-cart {
+  animation: cart-bounce 0.3s ease-in-out;
+}
+
 /* end b.v.1.0.3
