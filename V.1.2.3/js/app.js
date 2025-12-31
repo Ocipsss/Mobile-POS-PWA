@@ -14,13 +14,13 @@ const app = createApp({
         'page-laporan-harian': PageLaporanHarian,
         'page-stock-monitor': PageStockMonitor,
         'page-piutang-penjualan': PagePiutangPenjualan,
-        'page-dashboard':
-        PageDashboard,
-        'struk-nota': StrukNota, // Pastikan variabel StrukNota tersedia (panggil file-nya di index.html)
+        'page-dashboard': PageDashboard,
+        'struk-nota': StrukNota, 
     },
     
     setup() {
-        // --- STATE NAVIGASI & DATA ---
+        // --- STATE CLOUD & NAVIGASI ---
+        const isCloudOnline = ref(false);
         const isOpen = ref(false);
         const activePage = ref('Penjualan');
         const cart = ref([]); 
@@ -31,39 +31,49 @@ const app = createApp({
             phone: '08123xxxx' 
         });
 
-        // --- STATE PEMBAYARAN & STRUK ---
+        // --- STATE MODAL CUSTOM (PENGGANTI POPUP BROWSER) ---
+        const isConfirmModalOpen = ref(false);
+        const isSuccessModalOpen = ref(false);
+
+        // --- STATE TRANSAKSI & MEMBER ---
         const payMethod = ref('null');
         const cashAmount = ref(null);
-        const lastTransaction = ref(null); // Menyimpan data untuk struk
-
-        // --- STATE MEMBER ---
+        const lastTransaction = ref(null);
         const isMemberModalOpen = ref(false);
         const selectedMember = ref(null);
         const memberSearchQuery = ref(""); 
         const listMemberDB = ref([]);
 
-        // --- STATE SEARCH PRODUK ---
+        // --- STATE SEARCH ---
         const globalSearchQuery = ref(""); 
         const searchResults = ref([]);    
 
-        // --- LOGIKA DATA ---
+        // --- INITIALIZATION ---
         const refreshData = async () => {
             menuGroupsData.value = window.menuGroups || [];
             listMemberDB.value = await db.members.toArray();
         };
 
-        onMounted(refreshData);
+        onMounted(() => {
+            if (typeof fdb !== 'undefined') {
+                const connectedRef = firebase.database().ref(".info/connected");
+                connectedRef.on("value", (snap) => {
+                    isCloudOnline.value = snap.val() === true;
+                });
+            }
+            refreshData();
+        });
 
         watch(isMemberModalOpen, async (newVal) => {
             if (newVal) listMemberDB.value = await db.members.toArray();
         });
 
+        // --- COMPUTED ---
         const filteredMembers = computed(() => {
             const q = memberSearchQuery.value.toLowerCase();
             if (!q) return listMemberDB.value;
             return listMemberDB.value.filter(m => 
-                m.name.toLowerCase().includes(q) || 
-                m.id.toString().includes(q)
+                m.name.toLowerCase().includes(q) || m.id.toString().includes(q)
             );
         });
 
@@ -71,66 +81,75 @@ const app = createApp({
             return cart.value.reduce((sum, item) => sum + (item.price_sell * item.qty), 0);
         });
 
-        // --- FUNGSI PROSES BAYAR (VERSI GABUNGAN) ---
-        const prosesBayar = async () => {
+        // --- LOGIKA PEMBAYARAN BARU (MODAL CUSTOM) ---
+        
+        // 1. Trigger buka modal konfirmasi
+        const prosesBayar = () => {
             if (cart.value.length === 0) return;
-
+            
             if (payMethod.value === 'tempo' && !selectedMember.value) {
-                alert("Harap pilih Member terlebih dahulu untuk metode TEMPO!");
+                // Untuk error krusial tetap pakai alert sementara agar user sadar
+                alert("Pilih Member untuk metode TEMPO!");
                 isMemberModalOpen.value = true;
                 return;
             }
+            isConfirmModalOpen.value = true;
+        };
 
-            const total = totalBayar.value;
-            const paid = (payMethod.value === 'cash' && cashAmount.value) ? Number(cashAmount.value) : total;
-            const change = (paid - total) > 0 ? (paid - total) : 0;
-
-            const konfirmasi = confirm(`Total: Rp ${total.toLocaleString('id-ID')}\nMetode: ${payMethod.value.toUpperCase()}\nLanjutkan & Cetak Struk?`);
+        // 2. Eksekusi simpan data setelah klik "YA" di modal
+        const eksekusiBayar = async () => {
+            isConfirmModalOpen.value = false;
             
-            if (konfirmasi) {
-                try {
-                    const transData = {
-                        date: new Date().toISOString(),
-                        total: total,
-                        memberId: selectedMember.value ? selectedMember.value.id : null,
-                        items: JSON.parse(JSON.stringify(cart.value)),
-                        paymentMethod: payMethod.value,
-                        amountPaid: paid,
-                        change: payMethod.value === 'cash' ? change : 0,
-                        status: payMethod.value === 'tempo' ? 'hutang' : 'lunas',
-                        kasir: localStorage.getItem('activeKasir') || 'Pemilik'
-                    };
+            const total = totalBayar.value;
+            let paid = 0;
+            let statusBaru = 'lunas';
 
-                    const id = await db.transactions.add(transData);
-                    
-                    // Simpan ke state untuk memicu munculnya komponen <struk-nota>
-                    lastTransaction.value = { id, ...transData };
-
-                    // Update stok
-                    for (const item of cart.value) {
-                        const product = await db.products.get(item.id);
-                        if (product) {
-                            await db.products.update(item.id, { qty: product.qty - item.qty });
-                        }
-                    }
-                    
-                    // Delay sedikit agar Vue sempat merender struk sebelum jendela print muncul
-                    setTimeout(() => {
-                        window.print();
-                    }, 500);
-
-                    alert("Pembayaran Berhasil!");
-                    
-                    // Reset State
-                    cart.value = []; 
-                    selectedMember.value = null;
-                    cashAmount.value = null;
-                    payMethod.value = 'null';
-                } catch (err) {
-                    console.error(err);
-                    alert("Gagal simpan transaksi");
-                }
+            if (payMethod.value === 'cash') {
+                paid = cashAmount.value ? Number(cashAmount.value) : total;
+                statusBaru = 'lunas';
+            } else {
+                paid = 0; 
+                statusBaru = 'hutang';
             }
+
+            try {
+                const transData = {
+                    date: new Date().toISOString(),
+                    total: total,
+                    memberId: selectedMember.value ? selectedMember.value.id : null,
+                    items: JSON.parse(JSON.stringify(cart.value)),
+                    paymentMethod: payMethod.value,
+                    amountPaid: paid,
+                    change: payMethod.value === 'cash' ? (paid - total > 0 ? paid - total : 0) : 0,
+                    status: statusBaru,
+                    payments: [],
+                    kasir: localStorage.getItem('activeKasir') || 'Pemilik'
+                };
+
+                const id = await db.transactions.add(transData);
+                lastTransaction.value = { id, ...transData };
+
+                for (const item of cart.value) {
+                    const product = await db.products.get(item.id);
+                    if (product) await db.products.update(item.id, { qty: product.qty - item.qty });
+                }
+                
+                // Munculkan Modal Berhasil
+                isSuccessModalOpen.value = true;
+                
+                // Reset State Penjualan
+                cart.value = []; 
+                selectedMember.value = null;
+                cashAmount.value = null;
+                payMethod.value = 'null';
+            } catch (err) {
+                alert("Error: " + err.message);
+            }
+        };
+
+        const cetakStrukTerakhir = () => {
+            isSuccessModalOpen.value = false;
+            setTimeout(() => { window.print(); }, 500);
         };
 
         // --- LOGIKA SEARCH & NAV ---
@@ -139,7 +158,7 @@ const app = createApp({
             const query = globalSearchQuery.value.toLowerCase();
             const allProducts = await db.products.toArray();
             searchResults.value = allProducts.filter(p => 
-                (p.name && p.name.toLowerCase().includes(query)) || (p.code && p.code.toLowerCase().includes(query))
+                (p.name?.toLowerCase().includes(query)) || (p.code?.toLowerCase().includes(query))
             ).slice(0, 5); 
         };
 
@@ -162,22 +181,20 @@ const app = createApp({
                 'Pengaturan': 'page-pengaturan',
                 'Laporan Harian': 'page-laporan-harian',
                 'Stock Monitor': 'page-stock-monitor',
-                'Piutang Penjualan':
-                'page-piutang-penjualan',
-                'Dashboard':
-                'page-dashboard',
+                'Piutang Penjualan': 'page-piutang-penjualan',
+                'Dashboard': 'page-dashboard',
             };
             return map[pageName] || 'page-placeholder';
         };
         
         return {
             isOpen, activePage, cart, totalBayar, prosesBayar, getComponent, selectPage,
-            payMethod, cashAmount, lastTransaction, storeSettings, // Penting untuk Struk
-            menuGroups: menuGroupsData,
-            isMemberModalOpen, selectedMember, memberSearchQuery, filteredMembers,
-            globalSearchQuery, searchResults, handleGlobalSearch, addBySearch          
+            payMethod, cashAmount, lastTransaction, storeSettings, isCloudOnline,
+            menuGroups: menuGroupsData, isMemberModalOpen, selectedMember, 
+            memberSearchQuery, filteredMembers, globalSearchQuery, searchResults, 
+            handleGlobalSearch, addBySearch,
+            isConfirmModalOpen, isSuccessModalOpen, eksekusiBayar, cetakStrukTerakhir          
         }
     }
 });
-
 app.mount('#app');
