@@ -1,39 +1,22 @@
-importScripts('lib/workbox-sw.js');
+const CACHE_NAME = 'sinar-pagi-v1';
 
-if (workbox) {
-  console.log(`Workbox berhasil dimuat 🎉`);
+// Instalasi: Lewati masa tunggu agar SW langsung aktif
+self.addEventListener('install', (event) => {
+    self.skipWaiting();
+    console.log('SW: Service Worker Installed');
+});
 
-  // 1. Tambahkan Pre-caching untuk file inti agar bisa dibuka Offline
-  // Ini syarat penting agar tombol "Install" muncul di browser
-  workbox.precaching.precacheAndRoute([
-    { url: '/index.html', revision: '1.0.0' },
-    { url: '/js/app.js', revision: '1.0.0' },
-    // Masukkan file CSS utama kamu di sini jika ada
-  ]);
+// Aktivasi: Bersihkan cache lama jika ada
+self.addEventListener('activate', (event) => {
+    event.waitUntil(clients.claim());
+    console.log('SW: Service Worker Activated');
+});
 
-  // 2. Cache Assets (Script, Style, Fonts)
-  workbox.routing.registerRoute(
-    ({request}) => request.destination === 'script' || 
-                   request.destination === 'style' || 
-                   request.destination === 'font',
-    new workbox.strategies.StaleWhileRevalidate({
-      cacheName: 'assets-cache',
-    })
-  );
-
-  // 3. Cache Gambar
-  workbox.routing.registerRoute(
-    ({request}) => request.destination === 'image',
-    new workbox.strategies.CacheFirst({
-      cacheName: 'image-cache',
-      plugins: [
-        new workbox.expiration.ExpirationPlugin({
-          maxEntries: 50,
-          maxAgeSeconds: 30 * 24 * 60 * 60, // Simpan 30 hari
-        }),
-      ],
-    })
-  );
-} else {
-  console.log(`Workbox gagal dimuat ❌`);
-}
+// Fetch: Strategi Network-First agar data cloud selalu update
+self.addEventListener('fetch', (event) => {
+    event.respondWith(
+        fetch(event.request).catch(() => {
+            return caches.match(event.request);
+        })
+    );
+});

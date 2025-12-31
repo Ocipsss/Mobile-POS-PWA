@@ -27,6 +27,7 @@ window.menuGroups = [
         title: 'Laporan', 
         items: [
             { name: 'Laporan Harian', icon: 'ri-calendar-event-line' },
+            { name: 'Laba Rugi', icon: 'ri-funds-line' },
             { name: 'Pengaturan', icon: 'ri-settings-5-line' }
         ]
     }

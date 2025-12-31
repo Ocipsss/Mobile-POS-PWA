@@ -15,40 +15,32 @@ const app = createApp({
         'page-stock-monitor': PageStockMonitor,
         'page-piutang-penjualan': PagePiutangPenjualan,
         'page-dashboard': PageDashboard,
+        // Menggunakan window. untuk memastikan variabel dari file eksternal terbaca
+        'page-laba-rugi': window.PageLabaRugi, 
         'struk-nota': StrukNota, 
     },
     
     setup() {
-        // --- STATE CLOUD & NAVIGASI ---
         const isCloudOnline = ref(false);
         const isOpen = ref(false);
         const activePage = ref('Penjualan');
         const cart = ref([]); 
         const menuGroupsData = ref([]);
-        const storeSettings = ref({ 
-            storeName: 'SINAR PAGI', 
-            address: 'Jl. Raya No. 1', 
-            phone: '08123xxxx' 
-        });
+        const storeSettings = ref({ storeName: 'SINAR PAGI', address: 'Jl. Raya No. 1', phone: '08123xxxx' });
 
-        // --- STATE MODAL CUSTOM (PENGGANTI POPUP BROWSER) ---
         const isConfirmModalOpen = ref(false);
         const isSuccessModalOpen = ref(false);
-
-        // --- STATE TRANSAKSI & MEMBER ---
         const payMethod = ref('null');
         const cashAmount = ref(null);
         const lastTransaction = ref(null);
+        
         const isMemberModalOpen = ref(false);
         const selectedMember = ref(null);
         const memberSearchQuery = ref(""); 
         const listMemberDB = ref([]);
-
-        // --- STATE SEARCH ---
         const globalSearchQuery = ref(""); 
         const searchResults = ref([]);    
 
-        // --- INITIALIZATION ---
         const refreshData = async () => {
             menuGroupsData.value = window.menuGroups || [];
             listMemberDB.value = await db.members.toArray();
@@ -56,39 +48,25 @@ const app = createApp({
 
         onMounted(() => {
             if (typeof fdb !== 'undefined') {
-                const connectedRef = firebase.database().ref(".info/connected");
-                connectedRef.on("value", (snap) => {
+                fdb.ref(".info/connected").on("value", (snap) => {
                     isCloudOnline.value = snap.val() === true;
                 });
             }
             refreshData();
         });
 
-        watch(isMemberModalOpen, async (newVal) => {
-            if (newVal) listMemberDB.value = await db.members.toArray();
-        });
+        watch(isMemberModalOpen, async (val) => { if (val) listMemberDB.value = await db.members.toArray(); });
 
-        // --- COMPUTED ---
         const filteredMembers = computed(() => {
             const q = memberSearchQuery.value.toLowerCase();
-            if (!q) return listMemberDB.value;
-            return listMemberDB.value.filter(m => 
-                m.name.toLowerCase().includes(q) || m.id.toString().includes(q)
-            );
+            return q ? listMemberDB.value.filter(m => m.name.toLowerCase().includes(q) || m.id.toString().includes(q)) : listMemberDB.value;
         });
 
-        const totalBayar = computed(() => {
-            return cart.value.reduce((sum, item) => sum + (item.price_sell * item.qty), 0);
-        });
+        const totalBayar = computed(() => cart.value.reduce((sum, item) => sum + (item.price_sell * item.qty), 0));
 
-        // --- LOGIKA PEMBAYARAN BARU (MODAL CUSTOM) ---
-        
-        // 1. Trigger buka modal konfirmasi
         const prosesBayar = () => {
             if (cart.value.length === 0) return;
-            
             if (payMethod.value === 'tempo' && !selectedMember.value) {
-                // Untuk error krusial tetap pakai alert sementara agar user sadar
                 alert("Pilih Member untuk metode TEMPO!");
                 isMemberModalOpen.value = true;
                 return;
@@ -96,31 +74,34 @@ const app = createApp({
             isConfirmModalOpen.value = true;
         };
 
-        // 2. Eksekusi simpan data setelah klik "YA" di modal
         const eksekusiBayar = async () => {
             isConfirmModalOpen.value = false;
-            
             const total = totalBayar.value;
-            let paid = 0;
-            let statusBaru = 'lunas';
-
-            if (payMethod.value === 'cash') {
-                paid = cashAmount.value ? Number(cashAmount.value) : total;
-                statusBaru = 'lunas';
-            } else {
-                paid = 0; 
-                statusBaru = 'hutang';
-            }
+            let paid = (payMethod.value === 'cash') ? (cashAmount.value ? Number(cashAmount.value) : total) : 0;
+            let statusBaru = payMethod.value === 'cash' ? 'lunas' : 'hutang';
 
             try {
+                const mappedItems = cart.value.map(item => {
+                    const modal = Number(item.price_modal || 0);
+                    const jual = Number(item.price_sell || 0);
+                    return {
+                        id: item.id,
+                        name: item.name,
+                        qty: item.qty,
+                        price_modal: modal,
+                        price_sell: jual,
+                        profit: (jual - modal) * item.qty
+                    };
+                });
+
                 const transData = {
                     date: new Date().toISOString(),
                     total: total,
                     memberId: selectedMember.value ? selectedMember.value.id : null,
-                    items: JSON.parse(JSON.stringify(cart.value)),
+                    items: mappedItems,
                     paymentMethod: payMethod.value,
                     amountPaid: paid,
-                    change: payMethod.value === 'cash' ? (paid - total > 0 ? paid - total : 0) : 0,
+                    change: (payMethod.value === 'cash' && paid > total) ? (paid - total) : 0,
                     status: statusBaru,
                     payments: [],
                     kasir: localStorage.getItem('activeKasir') || 'Pemilik'
@@ -130,21 +111,13 @@ const app = createApp({
                 lastTransaction.value = { id, ...transData };
 
                 for (const item of cart.value) {
-                    const product = await db.products.get(item.id);
-                    if (product) await db.products.update(item.id, { qty: product.qty - item.qty });
+                    const p = await db.products.get(item.id);
+                    if (p) await db.products.update(item.id, { qty: p.qty - item.qty });
                 }
                 
-                // Munculkan Modal Berhasil
                 isSuccessModalOpen.value = true;
-                
-                // Reset State Penjualan
-                cart.value = []; 
-                selectedMember.value = null;
-                cashAmount.value = null;
-                payMethod.value = 'null';
-            } catch (err) {
-                alert("Error: " + err.message);
-            }
+                cart.value = []; selectedMember.value = null; cashAmount.value = null; payMethod.value = 'null';
+            } catch (err) { alert("Error: " + err.message); }
         };
 
         const cetakStrukTerakhir = () => {
@@ -152,21 +125,17 @@ const app = createApp({
             setTimeout(() => { window.print(); }, 500);
         };
 
-        // --- LOGIKA SEARCH & NAV ---
         const handleGlobalSearch = async () => {
             if (!globalSearchQuery.value) { searchResults.value = []; return; }
             const query = globalSearchQuery.value.toLowerCase();
-            const allProducts = await db.products.toArray();
-            searchResults.value = allProducts.filter(p => 
-                (p.name?.toLowerCase().includes(query)) || (p.code?.toLowerCase().includes(query))
-            ).slice(0, 5); 
+            const all = await db.products.toArray();
+            searchResults.value = all.filter(p => p.name?.toLowerCase().includes(query) || p.code?.toLowerCase().includes(query)).slice(0, 5); 
         };
 
         const addBySearch = (product) => {
-            const itemInCart = cart.value.find(item => item.id === product.id);
-            itemInCart ? itemInCart.qty++ : cart.value.push({ ...product, qty: 1 });
-            globalSearchQuery.value = "";
-            searchResults.value = [];
+            const inCart = cart.value.find(item => item.id === product.id);
+            inCart ? inCart.qty++ : cart.value.push({ ...product, qty: 1 });
+            globalSearchQuery.value = ""; searchResults.value = [];
         };
 
         const selectPage = (name) => { isOpen.value = false; activePage.value = name; };
@@ -183,6 +152,7 @@ const app = createApp({
                 'Stock Monitor': 'page-stock-monitor',
                 'Piutang Penjualan': 'page-piutang-penjualan',
                 'Dashboard': 'page-dashboard',
+                'Laba Rugi': 'page-laba-rugi',
             };
             return map[pageName] || 'page-placeholder';
         };
