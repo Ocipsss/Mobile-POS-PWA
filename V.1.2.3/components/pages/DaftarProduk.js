@@ -91,7 +91,7 @@ const PageDaftarProduk = {
     },
     
     template: `
-        <div class="flex flex-col gap-3 pb-28">
+        <div class="flex flex-col  gap-3 pb-28">
             
             <div class="sticky top-0 z-40 bg-[#f1f5f9]/95 backdrop-blur-md pt-2 pb-3 -mx-4 px-4 border-b border-gray-100">
                 <div class="flex flex-col gap-3">

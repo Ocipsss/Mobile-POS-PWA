@@ -73,53 +73,77 @@ const app = createApp({
             }
             isConfirmModalOpen.value = true;
         };
+// EKSEKUSI BAYAR //
+const eksekusiBayar = async () => {
+    isConfirmModalOpen.value = false;
+    const total = totalBayar.value;
+    let paid = (payMethod.value === 'cash') ? (cashAmount.value ? Number(cashAmount.value) : total) : 0;
+    let statusBaru = payMethod.value === 'cash' ? 'lunas' : 'hutang';
 
-        const eksekusiBayar = async () => {
-            isConfirmModalOpen.value = false;
-            const total = totalBayar.value;
-            let paid = (payMethod.value === 'cash') ? (cashAmount.value ? Number(cashAmount.value) : total) : 0;
-            let statusBaru = payMethod.value === 'cash' ? 'lunas' : 'hutang';
+    try {
+        let totalProfitTransaksi = 0; // Tambahkan penampung profit
+        const mappedItems = cart.value.map(item => {
+            const modal = Number(item.price_modal || 0);
+            const jual = Number(item.price_sell || 0);
+            const itemProfit = (jual - modal) * item.qty;
+            
+            totalProfitTransaksi += itemProfit; // Akumulasi profit
 
-            try {
-                const mappedItems = cart.value.map(item => {
-                    const modal = Number(item.price_modal || 0);
-                    const jual = Number(item.price_sell || 0);
-                    return {
-                        id: item.id,
-                        name: item.name,
-                        qty: item.qty,
-                        price_modal: modal,
-                        price_sell: jual,
-                        profit: (jual - modal) * item.qty
-                    };
-                });
+            return {
+                id: item.id,
+                name: item.name,
+                qty: item.qty,
+                price_modal: modal,
+                price_sell: jual,
+                profit: itemProfit
+            };
+        });
 
-                const transData = {
-                    date: new Date().toISOString(),
-                    total: total,
-                    memberId: selectedMember.value ? selectedMember.value.id : null,
-                    items: mappedItems,
-                    paymentMethod: payMethod.value,
-                    amountPaid: paid,
-                    change: (payMethod.value === 'cash' && paid > total) ? (paid - total) : 0,
-                    status: statusBaru,
-                    payments: [],
-                    kasir: localStorage.getItem('activeKasir') || 'Pemilik'
-                };
-
-                const id = await db.transactions.add(transData);
-                lastTransaction.value = { id, ...transData };
-
-                for (const item of cart.value) {
-                    const p = await db.products.get(item.id);
-                    if (p) await db.products.update(item.id, { qty: p.qty - item.qty });
-                }
-                
-                isSuccessModalOpen.value = true;
-                cart.value = []; selectedMember.value = null; cashAmount.value = null; payMethod.value = 'null';
-            } catch (err) { alert("Error: " + err.message); }
+        const transData = {
+            date: new Date().toISOString(),
+            total: total,
+            memberId: selectedMember.value ? selectedMember.value.id : null,
+            items: mappedItems,
+            paymentMethod: payMethod.value,
+            amountPaid: paid,
+            change: (payMethod.value === 'cash' && paid > total) ? (paid - total) : 0,
+            status: statusBaru,
+            payments: [],
+            kasir: localStorage.getItem('activeKasir') || 'Pemilik'
         };
 
+        const id = await db.transactions.add(transData);
+        lastTransaction.value = { id, ...transData };
+
+        // --- LOGIKA POIN & AKUMULASI MEMBER ---
+        if (selectedMember.value && selectedMember.value.id) {
+            // Hitung poin (2% dari total profit transaksi ini)
+            const poinBaru = Math.floor(totalProfitTransaksi * 0.02);
+
+            await db.members.where('id').equals(selectedMember.value.id).modify(m => {
+                // Update Akumulasi Belanja
+                m.total_spending = (Number(m.total_spending) || 0) + total;
+                // Update Poin (Private)
+                m.points = (Number(m.points) || 0) + poinBaru;
+            });
+            
+            await refreshData(); // Agar listMemberDB di app.js sinkron dengan data terbaru di DB
+
+console.log(`Poin tercatat: ${poinBaru}`);
+}
+        // --------------------------------------
+
+        for (const item of cart.value) {
+            const p = await db.products.get(item.id);
+            if (p) await db.products.update(item.id, { qty: p.qty - item.qty });
+        }
+        
+        isSuccessModalOpen.value = true;
+        cart.value = []; selectedMember.value = null; cashAmount.value = null; payMethod.value = 'null';
+    } catch (err) { alert("Error: " + err.message); }
+};
+
+// END-EKSEKUSI BAYAR //
         const cetakStrukTerakhir = () => {
             isSuccessModalOpen.value = false;
             setTimeout(() => { window.print(); }, 500);

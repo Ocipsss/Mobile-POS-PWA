@@ -1,7 +1,4 @@
 root/:
-- assets/
-   - icons/
-   - img/
 - components/
    - GlobalSearch.js
    - Layout.js
@@ -9,15 +6,16 @@ root/:
    - pages/
       -ArusUang.js
       -DaftarProduk.js
+      -Dashboard.js
       -DataKasir.js
       -DataMember.js
       -DataSuplier.js
       -HargaGrosir.js
       -HargaPaket.js
       -KategoriProduk.js
-      -LabaRugiBersih.js
       -LaporanBulanan.js
       -LaporanHarian.js
+      -LaporanLabaRugi.js
       -LaporanMingguan.js
       -PaketProduk.js
       -Pemasukan.js
@@ -26,12 +24,14 @@ root/:
       -Penjualan.js
       -PiutangPenjualan.js
       -StockMonitor.js
+      -StrukNota.js
       -TambahProduk.js
       -TotalSaldo.js
 - css/
    - style.css
 - js/
    - app.js
+   - backup.js
    - database.js
    - routes.js
 - lib/

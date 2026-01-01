@@ -5,8 +5,16 @@ const PageDataMember = {
         const showModal = Vue.ref(false);
         const newMember = Vue.ref({ id: '', name: '', address: '' });
 
+        // Helper untuk format rupiah agar tampilan rapi
+        const formatRupiah = (val) => {
+            if (!val) return 'Rp 0';
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
+        };
+
         const loadMembers = async () => {
-            members.value = await db.members.toArray();
+            // Kita ambil dan urutkan berdasarkan total belanja terbesar (Top Member)
+            const data = await db.members.toArray();
+            members.value = data.sort((a, b) => (b.total_spending || 0) - (a.total_spending || 0));
         };
 
         const saveMember = async () => {
@@ -21,7 +29,9 @@ const PageDataMember = {
                 await db.members.add({ 
                     id: newMember.value.id,
                     name: newMember.value.name,
-                    address: newMember.value.address || '-'
+                    address: newMember.value.address || '-',
+                    total_spending: 0, // Inisialisasi awal
+                    points: 0          // Inisialisasi awal
                 });
                 
                 newMember.value = { id: '', name: '', address: '' };
@@ -42,39 +52,54 @@ const PageDataMember = {
 
         Vue.onMounted(loadMembers);
 
-        return { members, showModal, newMember, saveMember, deleteMember };
+        return { members, showModal, newMember, saveMember, deleteMember, formatRupiah };
     },
     template: `
         <div class="flex flex-col gap-4 pb-24">
             <div class="flex justify-between items-center px-1">
-                <h3 class="text-lg font-black text-gray-800 uppercase tracking-tight">Data Member</h3>
+                <div>
+                    <h3 class="text-lg font-black text-gray-800 uppercase tracking-tight">Data Member</h3>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Urutan berdasarkan loyalitas</p>
+                </div>
                 <button @click="showModal = true" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black border-none shadow-md active:scale-95 transition-all">
                     + TAMBAH BARU
                 </button>
             </div>
 
             <div class="grid gap-3">
-                <div v-for="m in members" :key="m.id" class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center border border-blue-100 shadow-sm">
-                        <i class="ri-user-heart-line text-xl"></i>
-                    </div>
-                    
-                    <div class="flex-1 min-w-0">
-                        <div class="text-[15px] font-black text-gray-800 truncate leading-tight">{{ m.name }}</div>
-                        
-                        <div class="flex items-center gap-2 mt-0.5">
-                            <span class="bg-gray-100 text-gray-500 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter border border-gray-200">
-                                ID: {{ m.id }}
-                            </span>
-                            <span class="text-[10px] text-gray-400 font-bold truncate opacity-70">
-                               {{ m.address }}
-                            </span>
+                <div v-for="m in members" :key="m.id" class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-3">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center border border-blue-100 shadow-sm">
+                            <i class="ri-user-heart-line text-xl"></i>
                         </div>
+                        
+                        <div class="flex-1 min-w-0">
+                            <div class="text-[15px] font-black text-gray-800 truncate leading-tight">{{ m.name }}</div>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                <span class="bg-gray-100 text-gray-500 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter border border-gray-200">
+                                    ID: {{ m.id }}
+                                </span>
+                                <span class="text-[10px] text-gray-400 font-bold truncate opacity-70">
+                                   {{ m.address }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <button @click="deleteMember(m.id)" class="text-gray-300 border-none bg-transparent hover:text-red-500 p-2">
+                            <i class="ri-delete-bin-line text-lg"></i>
+                        </button>
                     </div>
 
-                    <button @click="deleteMember(m.id)" class="text-gray-300 border-none bg-transparent hover:text-red-500 p-2">
-                        <i class="ri-delete-bin-line text-lg"></i>
-                    </button>
+                    <div class="grid grid-cols-2 gap-2 mt-1 pt-3 border-t border-gray-50">
+                        <div class="bg-gray-50 p-2 rounded-xl">
+                            <div class="text-[8px] font-black text-gray-400 uppercase tracking-widest">Akumulasi Belanja</div>
+                            <div class="text-xs font-black text-gray-700">{{ formatRupiah(m.total_spending || 0) }}</div>
+                        </div>
+                        <div class="bg-blue-50/50 p-2 rounded-xl border border-blue-100/50">
+                            <div class="text-[8px] font-black text-blue-400 uppercase tracking-widest">Poin Loyalitas</div>
+                            <div class="text-xs font-black text-blue-600">{{ m.points || 0 }} <span class="text-[8px] opacity-50">PTS</span></div>
+                        </div>
+                    </div>
                 </div>
 
                 <div v-if="members.length === 0" class="py-20 text-center opacity-30 flex flex-col items-center">
