@@ -26,17 +26,47 @@ const PagePengaturan = {
             const res = await BackupService.importData(file);
             if (res.success) {
                 alert(res.message);
-                window.location.reload(); // Reload untuk menyegarkan state database di UI
+                window.location.reload(); 
             } else {
                 alert("Gagal: " + res.message);
             }
-            // Reset input file
             event.target.value = '';
+        };
+
+        // --- FUNGSI RESET DATA TOTAL ---
+        const handleResetData = async () => {
+            const murni = confirm("PERINGATAN KERAS!\n\nSemua data (Produk, Transaksi, Member, Kategori) akan DIHAPUS PERMANEN dari perangkat ini dan juga dari CLOUD (Firebase).\n\nApakah Anda benar-benar yakin?");
+            
+            if (murni) {
+                const doubleCheck = confirm("Tindakan ini tidak bisa dibatalkan. Klik OK untuk menghapus semuanya.");
+                if (doubleCheck) {
+                    try {
+                        // 1. Hapus di Firebase (Cloud)
+                        if (typeof fdb !== 'undefined') {
+                            const tables = ['products', 'categories', 'transactions', 'members'];
+                            for (const t of tables) {
+                                await fdb.ref(t).remove();
+                            }
+                        }
+
+                        // 2. Hapus di Dexie (Local)
+                        await db.products.clear();
+                        await db.categories.clear();
+                        await db.transactions.clear();
+                        await db.members.clear();
+
+                        alert("Database telah dikosongkan.");
+                        window.location.reload();
+                    } catch (err) {
+                        alert("Gagal mereset: " + err.message);
+                    }
+                }
+            }
         };
 
         Vue.onMounted(loadStats);
 
-        return { stats, handleExport, handleImport };
+        return { stats, handleExport, handleImport, handleResetData };
     },
     template: `
     <div class="p-4 flex flex-col gap-6">
@@ -86,10 +116,23 @@ const PagePengaturan = {
             </label>
         </div>
 
-        <div class="mt-4 p-6 border-2 border-dashed border-gray-200 rounded-[2rem] text-center">
+        <div class="mt-4 flex flex-col gap-4">
+            <h4 class="text-[10px] font-black text-red-400 uppercase tracking-[0.2em] ml-2">Zona Bahaya</h4>
+            <div class="bg-red-50 p-6 rounded-[2rem] border-2 border-dashed border-red-100">
+                <p class="text-[10px] text-red-500 font-bold mb-4 leading-relaxed uppercase tracking-tighter">
+                    Menghapus data akan membersihkan seluruh produk, transaksi, dan member secara permanen dari Cloud dan HP ini.
+                </p>
+                <button @click="handleResetData" 
+                        class="w-full py-4 bg-red-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg shadow-red-100 active:scale-95 transition-all tracking-widest">
+                    Kosongkan Database
+                </button>
+            </div>
+        </div>
+
+        <div class="mt-4 p-6 text-center">
             <i class="ri-smartphone-line text-2xl text-gray-300"></i>
             <div class="text-[9px] font-black text-gray-400 uppercase mt-2 tracking-widest">Sinar Pagi POS v1.3.0</div>
-            <div class="text-[8px] text-gray-300 font-bold uppercase">Database: IndexedDB (Offline First)</div>
+            <div class="text-[8px] text-gray-300 font-bold uppercase">Database: IndexedDB + Firebase Cloud</div>
         </div>
 
     </div>
