@@ -15,12 +15,17 @@ const app = createApp({
         'page-stock-monitor': PageStockMonitor,
         'page-piutang-penjualan': PagePiutangPenjualan,
         'page-dashboard': PageDashboard,
-        // Menggunakan window. untuk memastikan variabel dari file eksternal terbaca
         'page-laba-rugi': window.PageLabaRugi, 
         'struk-nota': StrukNota, 
     },
     
     setup() {
+        // --- STATE AUTHENTICATION ---
+        const isLoggedIn = ref(false);
+        const loginData = ref({ email: '', password: '' });
+        const isAuthChecking = ref(true);
+
+        // --- STATE UTAMA ---
         const isCloudOnline = ref(false);
         const isOpen = ref(false);
         const activePage = ref('Penjualan');
@@ -46,13 +51,39 @@ const app = createApp({
             listMemberDB.value = await db.members.toArray();
         };
 
-        onMounted(() => {
-            if (typeof fdb !== 'undefined') {
-                fdb.ref(".info/connected").on("value", (snap) => {
-                    isCloudOnline.value = snap.val() === true;
-                });
+        // --- LOGIKA LOGIN / LOGOUT ---
+        const handleLogin = async () => {
+            if (!loginData.value.email || !loginData.value.password) return alert("Isi email dan password!");
+            try {
+                await firebase.auth().signInWithEmailAndPassword(loginData.value.email, loginData.value.password);
+            } catch (err) {
+                alert("Gagal Login: " + err.message);
             }
-            refreshData();
+        };
+
+        const handleLogout = () => {
+            if (confirm("Keluar dari sistem?")) {
+                firebase.auth().signOut();
+            }
+        };
+
+        onMounted(() => {
+            // Monitor status login Firebase
+            firebase.auth().onAuthStateChanged((user) => {
+                isAuthChecking.value = false;
+                if (user) {
+                    isLoggedIn.value = true;
+                    // Monitor koneksi cloud hanya jika sudah login
+                    if (typeof fdb !== 'undefined') {
+                        fdb.ref(".info/connected").on("value", (snap) => {
+                            isCloudOnline.value = snap.val() === true;
+                        });
+                    }
+                    refreshData();
+                } else {
+                    isLoggedIn.value = false;
+                }
+            });
         });
 
         watch(isMemberModalOpen, async (val) => { if (val) listMemberDB.value = await db.members.toArray(); });
@@ -73,77 +104,66 @@ const app = createApp({
             }
             isConfirmModalOpen.value = true;
         };
-// EKSEKUSI BAYAR //
-const eksekusiBayar = async () => {
-    isConfirmModalOpen.value = false;
-    const total = totalBayar.value;
-    let paid = (payMethod.value === 'cash') ? (cashAmount.value ? Number(cashAmount.value) : total) : 0;
-    let statusBaru = payMethod.value === 'cash' ? 'lunas' : 'hutang';
 
-    try {
-        let totalProfitTransaksi = 0; // Tambahkan penampung profit
-        const mappedItems = cart.value.map(item => {
-            const modal = Number(item.price_modal || 0);
-            const jual = Number(item.price_sell || 0);
-            const itemProfit = (jual - modal) * item.qty;
-            
-            totalProfitTransaksi += itemProfit; // Akumulasi profit
+        const eksekusiBayar = async () => {
+            isConfirmModalOpen.value = false;
+            const total = totalBayar.value;
+            let paid = (payMethod.value === 'cash') ? (cashAmount.value ? Number(cashAmount.value) : total) : 0;
+            let statusBaru = payMethod.value === 'cash' ? 'lunas' : 'hutang';
 
-            return {
-                id: item.id,
-                name: item.name,
-                qty: item.qty,
-                price_modal: modal,
-                price_sell: jual,
-                profit: itemProfit
-            };
-        });
+            try {
+                let totalProfitTransaksi = 0;
+                const mappedItems = cart.value.map(item => {
+                    const modal = Number(item.price_modal || 0);
+                    const jual = Number(item.price_sell || 0);
+                    const itemProfit = (jual - modal) * item.qty;
+                    totalProfitTransaksi += itemProfit;
 
-        const transData = {
-            date: new Date().toISOString(),
-            total: total,
-            memberId: selectedMember.value ? selectedMember.value.id : null,
-            items: mappedItems,
-            paymentMethod: payMethod.value,
-            amountPaid: paid,
-            change: (payMethod.value === 'cash' && paid > total) ? (paid - total) : 0,
-            status: statusBaru,
-            payments: [],
-            kasir: localStorage.getItem('activeKasir') || 'Pemilik'
+                    return {
+                        id: item.id,
+                        name: item.name,
+                        qty: item.qty,
+                        price_modal: modal,
+                        price_sell: jual,
+                        profit: itemProfit
+                    };
+                });
+
+                const transData = {
+                    date: new Date().toISOString(),
+                    total: total,
+                    memberId: selectedMember.value ? selectedMember.value.id : null,
+                    items: mappedItems,
+                    paymentMethod: payMethod.value,
+                    amountPaid: paid,
+                    change: (payMethod.value === 'cash' && paid > total) ? (paid - total) : 0,
+                    status: statusBaru,
+                    payments: [],
+                    kasir: localStorage.getItem('activeKasir') || 'Pemilik'
+                };
+
+                const id = await db.transactions.add(transData);
+                lastTransaction.value = { id, ...transData };
+
+                if (selectedMember.value && selectedMember.value.id) {
+                    const poinBaru = Math.floor(totalProfitTransaksi * 0.02);
+                    await db.members.where('id').equals(selectedMember.value.id).modify(m => {
+                        m.total_spending = (Number(m.total_spending) || 0) + total;
+                        m.points = (Number(m.points) || 0) + poinBaru;
+                    });
+                    await refreshData();
+                }
+
+                for (const item of cart.value) {
+                    const p = await db.products.get(item.id);
+                    if (p) await db.products.update(item.id, { qty: p.qty - item.qty });
+                }
+                
+                isSuccessModalOpen.value = true;
+                cart.value = []; selectedMember.value = null; cashAmount.value = null; payMethod.value = 'null';
+            } catch (err) { alert("Error: " + err.message); }
         };
 
-        const id = await db.transactions.add(transData);
-        lastTransaction.value = { id, ...transData };
-
-        // --- LOGIKA POIN & AKUMULASI MEMBER ---
-        if (selectedMember.value && selectedMember.value.id) {
-            // Hitung poin (2% dari total profit transaksi ini)
-            const poinBaru = Math.floor(totalProfitTransaksi * 0.02);
-
-            await db.members.where('id').equals(selectedMember.value.id).modify(m => {
-                // Update Akumulasi Belanja
-                m.total_spending = (Number(m.total_spending) || 0) + total;
-                // Update Poin (Private)
-                m.points = (Number(m.points) || 0) + poinBaru;
-            });
-            
-            await refreshData(); // Agar listMemberDB di app.js sinkron dengan data terbaru di DB
-
-console.log(`Poin tercatat: ${poinBaru}`);
-}
-        // --------------------------------------
-
-        for (const item of cart.value) {
-            const p = await db.products.get(item.id);
-            if (p) await db.products.update(item.id, { qty: p.qty - item.qty });
-        }
-        
-        isSuccessModalOpen.value = true;
-        cart.value = []; selectedMember.value = null; cashAmount.value = null; payMethod.value = 'null';
-    } catch (err) { alert("Error: " + err.message); }
-};
-
-// END-EKSEKUSI BAYAR //
         const cetakStrukTerakhir = () => {
             isSuccessModalOpen.value = false;
             setTimeout(() => { window.print(); }, 500);
@@ -182,6 +202,7 @@ console.log(`Poin tercatat: ${poinBaru}`);
         };
         
         return {
+            isLoggedIn, loginData, isAuthChecking, handleLogin, handleLogout,
             isOpen, activePage, cart, totalBayar, prosesBayar, getComponent, selectPage,
             payMethod, cashAmount, lastTransaction, storeSettings, isCloudOnline,
             menuGroups: menuGroupsData, isMemberModalOpen, selectedMember, 

@@ -1,6 +1,6 @@
 {
-  "name": "Sistem Kasir Pintar",
-  "short_name": "Kasir",
+  "name": "Sinar Pagi App",
+  "short_name": "Kadut",
   "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#ffffff",
