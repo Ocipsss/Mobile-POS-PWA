@@ -79,7 +79,7 @@ const app = createApp({
             });
         });
 
-        // BARCODE SCANNER LOGIC
+        // BARCODE SCANNER LOGIC - UPDATED FOR MULTI-PAGE
         const startScanner = () => {
             isScannerOpen.value = true;
             setTimeout(() => {
@@ -88,14 +88,28 @@ const app = createApp({
                     { facingMode: "environment" },
                     { fps: 15, qrbox: { width: 250, height: 150 } },
                     async (decodedText) => {
-                        const product = await db.products.where('code').equals(decodedText).first();
-                        if (product) {
-                            if (navigator.vibrate) navigator.vibrate(100);
-                            addBySearch(product);
-                            stopScanner();
-                        } else {
-                            alert("Produk tidak ditemukan: " + decodedText);
-                            stopScanner();
+                        if (navigator.vibrate) navigator.vibrate(100);
+
+                        // KASUS 1: JIKA BERADA DI HALAMAN TAMBAH PRODUK
+                        if (activePage.value === 'Tambah Produk') {
+                            const inputBarcode = document.querySelector('input[placeholder="Scan atau manual..."]');
+                            if (inputBarcode) {
+                                inputBarcode.value = decodedText;
+                                // Paksa Vue untuk mengupdate model data
+                                inputBarcode.dispatchEvent(new Event('input', { bubbles: true }));
+                                stopScanner();
+                            }
+                        } 
+                        // KASUS 2: JIKA BERADA DI HALAMAN PENJUALAN / LAINNYA
+                        else {
+                            const product = await db.products.where('code').equals(decodedText).first();
+                            if (product) {
+                                addBySearch(product);
+                                stopScanner();
+                            } else {
+                                alert("Produk tidak ditemukan: " + decodedText);
+                                stopScanner();
+                            }
                         }
                     }
                 ).catch(err => {
