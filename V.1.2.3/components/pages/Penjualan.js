@@ -102,7 +102,7 @@ const PagePenjualan = {
                         </div>
                     </div>
                     <button @click="(!cashAmount || cashAmount == 0) ? $emit('update:cashAmount', totalBelanja) : $emit('checkout')"
-                        class="w-full border-none py-3 rounded-xl bg-white text-blue-600 font-black uppercase text-[10px] tracking-widest shadow-lg">
+                        class="w-full border-none py-3 rounded-xl bg-white text-blue-600 font-black uppercase text-[10px] tracking-widest shadow-lg active:scale-95 transition-all">
                         {{ (!cashAmount || cashAmount == 0) ? 'UANG PAS' : (Number(cashAmount) < totalBelanja ? 'UANG KURANG' : 'PROSES SEKARANG') }}
                     </button>
                 </div>
@@ -125,7 +125,7 @@ const PagePenjualan = {
 
                 <div v-if="payMethod === 'qris' || payMethod === 'tempo'" class="mt-1">
                     <button @click="$emit('checkout')"
-                        class="w-full border-none py-4 rounded-[1.5rem] bg-gray-900 text-white font-black text-[10px] uppercase tracking-widest animate-slide-up shadow-xl">
+                        class="w-full border-none py-4 rounded-[1.5rem] bg-gray-900 text-white font-black text-[10px] uppercase tracking-widest animate-slide-up shadow-xl active:scale-95 transition-all">
                         PROSES {{ payMethod.toUpperCase() }}
                     </button>
                 </div>

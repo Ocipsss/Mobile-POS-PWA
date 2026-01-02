@@ -18,24 +18,17 @@
     <script src="lib/vue.js"></script>
     <script src="lib/dexie.min.js"></script>
     <script src="lib/unocss.js"></script>
+    <script src="lib/html5-qrcode.min.js"></script>
     
     <style>
         [v-cloak] { display: none; }
-        /* Animasi Transisi Halaman */
-        .fade-slide-enter-active, .fade-slide-leave-active {
-            transition: all 0.25s ease;
-        }
+        .fade-slide-enter-active, .fade-slide-leave-active { transition: all 0.25s ease; }
         .fade-slide-enter-from { opacity: 0; transform: translateX(20px); }
         .fade-slide-leave-to { opacity: 0; transform: translateX(-20px); }
-        
-        /* Animasi Modal & Login */
         .animate-slide-up { animation: slideUp 0.3s ease-out; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        
         .animate-zoom-in { animation: zoomIn 0.2s ease-out; }
         @keyframes zoomIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-
-        /* Custom Scrollbar */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -43,7 +36,6 @@
 <body>
 
 <div id="app" v-cloak>
-    
     <div v-if="isAuthChecking" class="fixed inset-0 flex items-center justify-center bg-white z-[9999]">
         <div class="text-center">
             <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -56,91 +48,54 @@
             <div class="w-20 h-20 bg-blue-600 text-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-200">
                 <i class="ri-lock-2-fill text-4xl"></i>
             </div>
-            <h2 class="text-2xl font-black text-gray-800 uppercase tracking-tight mb-2">Akses Terbatas</h2>
-            <p class="text-[10px] text-gray-400 font-bold mb-8 uppercase tracking-[0.2em]">Aplikasi Kasir Sinar Pagi</p>
-            
+            <h2 class="text-2xl font-black text-gray-800 uppercase tracking-tight mb-2">Sinar Pagi</h2>
             <div class="flex flex-col gap-4 text-left">
-                <div>
-                    <label class="text-[9px] font-black text-gray-400 uppercase ml-2 mb-1 block">Email Admin</label>
-                    <input v-model="loginData.email" type="email" placeholder="admin@mail.com" 
-                           class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 ring-blue-500 outline-none transition-all">
-                </div>
-                <div>
-                    <label class="text-[9px] font-black text-gray-400 uppercase ml-2 mb-1 block">Password</label>
-                    <input v-model="loginData.password" type="password" placeholder="••••••••" 
-                           @keyup.enter="handleLogin"
-                           class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 ring-blue-500 outline-none transition-all">
-                </div>
-                <button @click="handleLogin" 
-                        class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase shadow-lg shadow-blue-100 active:scale-95 transition-all mt-4 tracking-widest">
-                    Buka Kunci Sistem
-                </button>
+                <input v-model="loginData.email" type="email" placeholder="Email Admin" class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold outline-none">
+                <input v-model="loginData.password" type="password" placeholder="Password" @keyup.enter="handleLogin" class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold outline-none">
+                <button @click="handleLogin" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-all">Buka Kunci</button>
             </div>
         </div>
     </div>
 
     <div v-else>
-        <sidebar-nav 
-            :groups="menuGroups" 
-            :active-page="activePage" 
-            @select-page="selectPage">
-        </sidebar-nav>
-
+        <sidebar-nav :groups="menuGroups" :active-page="activePage" @select-page="selectPage"></sidebar-nav>
         <struk-nota v-if="lastTransaction" :transaksi="lastTransaction" :settings="storeSettings"></struk-nota>
 
         <div class="main-card" :class="{ 'is-open': isOpen }" @click="isOpen ? isOpen = false : null">
-            
-            <header style="display: flex; flex-direction: column; gap: 10px; padding-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    
+            <header class="flex flex-col gap-3 pb-4">
+                <div class="flex justify-between items-center w-full">
                     <button class="btn-burger" @click.stop="isOpen = !isOpen">
                         <i :class="isOpen ? 'ri-arrow-left-line' : 'ri-menu-3-line'"></i>
                     </button>
-
                     <div class="text-center">
-                        <div style="display: flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 2px;">
-                            <i class="ri-cloud-line" :style="{ color: isCloudOnline ? '#22c55e' : '#f43f5e', fontSize: '10px' }"></i>
-                            <span style="font-size: 8px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">
-                                {{ isCloudOnline ? 'Cloud Active' : 'Offline' }}
-                            </span>
+                        <div class="flex items-center justify-center gap-1 mb-1">
+                            <i class="ri-cloud-line text-[10px]" :style="{ color: isCloudOnline ? '#22c55e' : '#f43f5e' }"></i>
+                            <span class="text-[8px] font-black uppercase text-gray-400 tracking-widest">{{ isCloudOnline ? 'Online' : 'Offline' }}</span>
                         </div>
-
-                        <span v-if="selectedMember && activePage === 'Penjualan'" 
-                              style="font-size: 10px; font-weight: 800; color: #2563eb; display: block; text-transform: uppercase;">
-                              {{ selectedMember.name }}
-                        </span>
-                        <span style="font-size: 16px; font-weight: 900; color: #1e293b; letter-spacing: -0.5px; line-height: 1;">
-                            {{ activePage }}
-                        </span>
+                        <span class="text-base font-black text-gray-800 leading-none uppercase">{{ activePage }}</span>
                     </div>
-                    
-                    <button class="btn-burger" 
-                            @click="activePage === 'Penjualan' ? isMemberModalOpen = true : selectPage('Penjualan')"> 
-                        <i v-if="activePage === 'Penjualan'" 
-                           :class="selectedMember ? 'ri-user-heart-fill text-blue-500' : 'ri-user-search-line'"></i>
+                    <button class="btn-burger" @click="activePage === 'Penjualan' ? isMemberModalOpen = true : selectPage('Penjualan')"> 
+                        <i v-if="activePage === 'Penjualan'" :class="selectedMember ? 'ri-user-heart-fill text-blue-500' : 'ri-user-search-line'"></i>
                         <i v-else class="ri-shopping-cart-2-line text-blue-500"></i>
                     </button>
                 </div>
                 
-                <div v-if="activePage === 'Penjualan'" style="position: relative; width: 100%;">
-                    <global-search 
-                        v-model="globalSearchQuery" 
-                        placeholder="Cari Produk atau Scan..."
-                        @input="handleGlobalSearch">
-                    </global-search>
-
-                    <div v-if="searchResults.length > 0 && globalSearchQuery" 
-                         style="position: absolute; top: 100%; left: 0; right: 0; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); z-index: 999; max-height: 250px; overflow-y: auto;">
-                        <div v-for="p in searchResults" :key="p.id" 
-                             @click="addBySearch(p)"
-                             style="padding: 12px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px;">
-                            <div style="flex: 1;">
-                                <div style="font-size: 13px; font-weight: 700; color: #334155;">{{ p.name }}</div>
-                                <div style="font-size: 11px; color: #2563eb; font-weight: 800;">Rp {{ p.price_sell.toLocaleString('id-ID') }}</div>
+                <div v-if="activePage === 'Penjualan' || activePage === 'Daftar Produk'" class="flex gap-2 w-full relative">
+                    <div class="flex-1 relative">
+                        <global-search v-model="globalSearchQuery" placeholder="Cari barang..." @input="handleGlobalSearch"></global-search>
+                        <div v-if="searchResults.length > 0 && globalSearchQuery" class="absolute top-full left-0 right-0 bg-white rounded-2xl shadow-2xl z-[999] mt-2 max-h-60 overflow-y-auto border border-gray-100">
+                            <div v-for="p in searchResults" :key="p.id" @click="addBySearch(p)" class="p-4 border-b border-gray-50 flex justify-between items-center active:bg-blue-50">
+                                <div>
+                                    <div class="text-xs font-black text-gray-800 uppercase">{{ p.name }}</div>
+                                    <div class="text-[10px] font-bold text-blue-600">Rp {{ p.price_sell.toLocaleString('id-ID') }}</div>
+                                </div>
+                                <div class="text-[9px] font-bold text-gray-400">Stok: {{ p.qty }}</div>
                             </div>
-                            <div style="font-size: 10px; color: #94a3b8; font-weight: 600;">Stok: {{ p.qty }}</div>
                         </div>
                     </div>
+                    <button @click="startScanner" class="w-14 h-12 bg-blue-50 text-blue-600 border-none rounded-xl flex items-center justify-center active:bg-blue-100 transition-all">
+                        <i class="ri-qr-scan-2-line text-xl"></i>
+                    </button>
                 </div>
             </header>
 
@@ -154,80 +109,71 @@
                         v-model:pay-method="payMethod"
                         v-model:cash-amount="cashAmount"
                         @checkout="prosesBayar"
+                        @open-scanner="startScanner"
                         :page-name="activePage">
                     </component>
                 </transition>
             </main>
+        </div>
 
-            <div v-if="isMemberModalOpen" class="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 backdrop-blur-sm transition-opacity" @click.self="isMemberModalOpen = false">
-                <div class="bg-white w-full max-w-md rounded-t-[32px] p-6 animate-slide-up shadow-2xl">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 class="text-lg font-black text-gray-800 uppercase tracking-tight">Pilih Pelanggan</h3>
-                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Pilih untuk riwayat belanja</p>
-                        </div>
-                        <button @click="isMemberModalOpen = false" class="bg-gray-100 border-none w-10 h-10 rounded-full flex items-center justify-center">
-                            <i class="ri-close-line text-xl text-gray-500"></i>
-                        </button>
-                    </div>
-                    <div class="mb-6">
-                        <global-search v-model="memberSearchQuery" placeholder="Cari nama, ID, atau HP..."></global-search>
-                    </div>
-                    <div class="max-h-[45vh] overflow-y-auto no-scrollbar flex flex-col gap-3 pb-4">
-                        <div v-for="m in filteredMembers" :key="m.id" 
-                             @click="selectedMember = m; isMemberModalOpen = false" 
-                             class="p-4 border border-gray-100 rounded-2xl flex items-center gap-4 active:bg-blue-50 transition-all shadow-sm bg-white cursor-pointer">
-                            <div class="w-12 h-12 bg-gray-50 text-blue-600 rounded-2xl flex items-center justify-center font-black text-lg border border-gray-100">
-                                {{ m.name.charAt(0).toUpperCase() }}
-                            </div>
-                            <div class="flex-1">
-                                <div class="text-sm font-black text-gray-800">{{ m.name }}</div>
-                                <div class="text-[10px] text-gray-500 font-bold">ID: #{{ m.id }} • {{ m.phone }}</div>
-                            </div>
-                            <div v-if="selectedMember && selectedMember.id === m.id" class="text-blue-500">
-                                <i class="ri-checkbox-circle-fill text-xl"></i>
-                            </div>
-                        </div>
-                        <button @click="selectPage('Data Member'); isMemberModalOpen = false" 
-                                class="w-full py-4 border-2 border-dashed border-gray-100 rounded-2xl text-gray-400 text-[10px] font-black uppercase mt-2 flex flex-col items-center gap-1">
-                            <i class="ri-user-add-line text-lg"></i>
-                            Kelola Data Pelanggan
-                        </button>
+        <div v-if="isScannerOpen" class="fixed inset-0 z-[9999] bg-white flex flex-col p-6 animate-zoom-in">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex flex-col">
+                    <span class="text-xs font-black uppercase tracking-widest text-blue-600">Scanner Aktif</span>
+                    <span class="text-[10px] text-gray-400 font-bold uppercase">Arahkan ke Barcode Produk</span>
+                </div>
+                <button @click="stopScanner" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 border-none active:bg-red-50 active:text-red-500 transition-all">
+                    <i class="ri-close-line text-xl"></i>
+                </button>
+            </div>
+            <div id="reader" class="rounded-[2.5rem] overflow-hidden border-4 border-blue-50 shadow-sm bg-gray-50"></div>
+            <div class="mt-auto py-8 text-center">
+                <div class="flex items-center justify-center gap-2 mb-2">
+                    <div class="w-1 h-1 bg-blue-600 rounded-full animate-ping"></div>
+                    <span class="text-[9px] text-gray-400 font-black tracking-[0.3em] uppercase">Sinar Pagi System</span>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="isMemberModalOpen" class="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 backdrop-blur-sm" @click.self="isMemberModalOpen = false">
+            <div class="bg-white w-full max-w-md rounded-t-[32px] p-6 animate-slide-up shadow-2xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-black text-gray-800 uppercase tracking-tight">Pilih Pelanggan</h3>
+                    <button @click="isMemberModalOpen = false" class="bg-gray-100 border-none w-10 h-10 rounded-full flex items-center justify-center"><i class="ri-close-line"></i></button>
+                </div>
+                <div class="mb-4"><global-search v-model="memberSearchQuery" placeholder="Cari nama..."></global-search></div>
+                <div class="max-h-[40vh] overflow-y-auto no-scrollbar flex flex-col gap-2">
+                    <div v-for="m in filteredMembers" :key="m.id" @click="selectedMember = m; isMemberModalOpen = false" class="p-4 border border-gray-100 rounded-2xl flex items-center gap-4 active:bg-blue-50 transition-all">
+                        <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-black">{{ m.name.charAt(0) }}</div>
+                        <div class="flex-1 text-sm font-black text-gray-800">{{ m.name }}</div>
+                        <i v-if="selectedMember?.id === m.id" class="ri-checkbox-circle-fill text-blue-500 text-xl"></i>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div v-if="isConfirmModalOpen" class="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl animate-zoom-in">
-                    <div class="text-center mb-6">
-                        <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="ri-shopping-cart-2-line text-3xl"></i>
-                        </div>
-                        <h4 class="text-xl font-black text-gray-800 uppercase tracking-tight">Konfirmasi</h4>
-                        <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Total Belanja</p>
-                        <div class="text-3xl font-black text-blue-600 mt-1">Rp {{ totalBayar.toLocaleString('id-ID') }}</div>
-                    </div>
-                    <div class="flex flex-col gap-3">
-                        <button @click="eksekusiBayar" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase shadow-lg shadow-blue-100 active:scale-95 transition-all">YA, PROSES</button>
-                        <button @click="isConfirmModalOpen = false" class="w-full py-2 text-gray-400 font-bold uppercase text-[10px] tracking-widest">BATALKAN</button>
-                    </div>
+        <div v-if="isSuccessModalOpen" class="fixed inset-0 z-[1001] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl animate-zoom-in">
+                <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4"><i class="ri-checkbox-circle-fill text-5xl"></i></div>
+                <h4 class="text-xl font-black text-gray-800 uppercase tracking-tight">Berhasil!</h4>
+                <div class="flex flex-col gap-3 mt-8">
+                    <button @click="cetakStrukTerakhir" class="w-full py-4 bg-gray-900 text-white rounded-2xl font-black uppercase">CETAK STRUK</button>
+                    <button @click="isSuccessModalOpen = false" class="w-full py-4 bg-gray-100 text-gray-600 rounded-2xl font-black uppercase">SELESAI</button>
                 </div>
             </div>
-
-            <div v-if="isSuccessModalOpen" class="fixed inset-0 z-[1001] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-                <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl animate-zoom-in">
-                    <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="ri-checkbox-circle-fill text-5xl"></i>
-                    </div>
-                    <h4 class="text-xl font-black text-gray-800 uppercase tracking-tight">Berhasil!</h4>
-                    <p class="text-sm text-gray-500 mb-8">Transaksi telah dicatat ke sistem.</p>
-                    <div class="flex flex-col gap-3">
-                        <button @click="cetakStrukTerakhir" class="w-full py-4 bg-gray-900 text-white rounded-2xl font-black uppercase active:scale-95 transition-all">CETAK STRUK</button>
-                        <button @click="isSuccessModalOpen = false" class="w-full py-4 bg-gray-100 text-gray-600 rounded-2xl font-black uppercase active:scale-95 transition-all">SELESAI</button>
-                    </div>
+        </div>
+        
+        <div v-if="isConfirmModalOpen" class="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl animate-zoom-in">
+                <div class="text-center mb-6">
+                    <h4 class="text-xl font-black text-gray-800 uppercase tracking-tight">Konfirmasi</h4>
+                    <div class="text-3xl font-black text-blue-600 mt-2">Rp {{ totalBayar.toLocaleString('id-ID') }}</div>
+                </div>
+                <div class="flex flex-col gap-3">
+                    <button @click="eksekusiBayar" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase shadow-lg">YA, PROSES</button>
+                    <button @click="isConfirmModalOpen = false" class="w-full py-2 text-gray-400 font-bold uppercase text-[10px]">BATALKAN</button>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
@@ -267,7 +213,6 @@
 <script src="components/pages/StrukNota.js"></script>
 <script src="components/pages/Dashboard.js"></script>
 <script src="components/pages/LaporanLabaRugi.js"></script>
-<script src="js/backup.js"></script>
 <script src="js/app.js"></script>
 
 <script>

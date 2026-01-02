@@ -1,26 +1,23 @@
 // js/database.js //
 const db = new Dexie("SinarPagiDB");
 
-// Dinaikkan ke versi 12 untuk migrasi ID Member (String) dan tabel Tarik Tunai
-db.version(12).stores({
+// Versi 11: Membersihkan fitur Tarik Tunai dan tabel cash_out
+db.version(11).stores({
     products: '++id, name, code, category, price_modal, price_sell, qty, unit',
     categories: '++id, name',
     transactions: '++id, date, total, memberId, paymentMethod, amountPaid, change, status',
     members: 'id, name, phone, address, total_spending, points', 
-    settings: 'id, storeName',
-    cash_out: '++id, date, amount_received, cash_given, fee, note'
+    settings: 'id, storeName'
 });
 
 // --- FUNGSI SINKRONISASI KELUAR (LOCAL -> CLOUD) ---
 const syncToCloud = (table, id, data) => {
-    // Pastikan Firebase (fdb) tersedia dan ID valid
     if (typeof fdb !== 'undefined' && id !== undefined && id !== null) {
         try {
             const ref = fdb.ref(table + '/' + id);
             if (data === null) {
                 ref.remove();
             } else {
-                // Gunakan JSON parse/stringify untuk membersihkan objek Dexie dari prototype tersembunyi
                 const cleanData = JSON.parse(JSON.stringify(data));
                 ref.set(cleanData);
             }
@@ -47,10 +44,7 @@ db.categories.hook('creating', (pk, obj) => { syncToCloud('categories', pk || ob
 db.categories.hook('updating', (mods, pk, obj) => { syncToCloud('categories', pk, obj); });
 db.categories.hook('deleting', (pk) => { syncToCloud('categories', pk, null); });
 
-// Cash Out (Tarik Tunai)
-db.cash_out.hook('creating', (pk, obj) => { syncToCloud('cash_out', pk || obj.id, obj); });
-
-// Transactions (Gunakan timeout agar data relasi/item benar-benar selesai diproses)
+// Transactions
 db.transactions.hook('creating', (pk, obj) => { syncToCloud('transactions', pk || obj.id, obj); });
 db.transactions.hook('updating', (mods, pk, obj) => {
     setTimeout(() => {
@@ -66,7 +60,7 @@ db.transactions.hook('deleting', (pk) => { syncToCloud('transactions', pk, null)
 const syncFromCloud = () => {
     if (typeof fdb === 'undefined') return;
 
-    const tables = ['products', 'categories', 'transactions', 'members', 'cash_out'];
+    const tables = ['products', 'categories', 'transactions', 'members'];
     tables.forEach(tableName => {
         const ref = fdb.ref(tableName);
         
@@ -82,21 +76,16 @@ const syncFromCloud = () => {
 
         ref.on('child_removed', async (snapshot) => {
             const id = snapshot.key;
-            // Deteksi jika ID adalah number atau string (seperti SP-XXXX)
             const targetId = isNaN(id) ? id : Number(id);
             await db[tableName].delete(targetId);
         });
     });
 };
 
-// --- HELPER LABA RUGI ---
+// --- HELPER LABA RUGI (Hanya Penjualan Produk) ---
 window.hitungLabaRugi = async (startDate, endDate) => {
     try {
         const semuaTransaksi = await db.transactions
-            .where('date').between(startDate, endDate, true, true)
-            .toArray();
-            
-        const semuaTarikTunai = await db.cash_out
             .where('date').between(startDate, endDate, true, true)
             .toArray();
 
@@ -104,11 +93,9 @@ window.hitungLabaRugi = async (startDate, endDate) => {
             totalOmzet: 0,
             totalModal: 0,
             totalLabaBersih: 0,
-            totalFeeTarikTunai: 0,
             count: semuaTransaksi.length
         };
 
-        // Hitung dari Transaksi Penjualan
         semuaTransaksi.forEach(tr => {
             stats.totalOmzet += Number(tr.total || 0);
             if (tr.items && Array.isArray(tr.items)) {
@@ -125,12 +112,6 @@ window.hitungLabaRugi = async (startDate, endDate) => {
                 });
             }
         });
-        
-        // Hitung Tambahan Laba dari Admin Tarik Tunai
-        semuaTarikTunai.forEach(ct => {
-            stats.totalFeeTarikTunai += Number(ct.fee || 0);
-            stats.totalLabaBersih += Number(ct.fee || 0);
-        });
 
         return stats;
     } catch (err) {
@@ -141,11 +122,8 @@ window.hitungLabaRugi = async (startDate, endDate) => {
 
 // --- EKSEKUSI JALANKAN DATABASE ---
 db.open().then(() => {
-    console.log("Database SinarPagiDB v12 Aktif");
+    console.log("Database SinarPagiDB v11 Aktif (Tarik Tunai Removed)");
     syncFromCloud(); 
 }).catch(err => {
-    if (err.name === 'VersionError') {
-        console.warn("Database versi lama terdeteksi. Silakan bersihkan storage browser.");
-    }
     console.error("Koneksi Database Gagal:", err);
 });

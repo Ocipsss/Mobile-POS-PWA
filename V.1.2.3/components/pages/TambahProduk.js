@@ -1,7 +1,9 @@
-// comoponents/pages/TambahProduk.js //
+// components/pages/TambahProduk.js //
 
 const PageTambahProduk = {
-    setup() {
+    // Menambahkan emits agar komponen bisa mengirim sinyal ke app.js
+    emits: ['open-scanner'],
+    setup(props, { emit }) {
         const product = Vue.ref({
             image: null, name: '', code: '', category: 'Umum', unit: 'pcs', price_modal: 0, price_sell: 0, qty: 0
         });
@@ -74,7 +76,7 @@ const PageTambahProduk = {
 
         Vue.onMounted(loadCategories);
 
-        return { product, takePhoto, saveProduct, displayModal, displaySell, updateNumber, listCategories };
+        return { product, takePhoto, saveProduct, displayModal, displaySell, updateNumber, listCategories, emit };
     },
     template: `
         <div class="flex flex-col gap-3 pb-24">
@@ -99,7 +101,7 @@ const PageTambahProduk = {
                     <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Kode / Barcode</label>
                     <div class="flex items-stretch gap-2 h-12"> 
                         <input v-model="product.code" type="text" class="form-control flex-1 !m-0" placeholder="Scan atau manual...">
-                        <button class="bg-blue-50 text-blue-600 border-none px-4 rounded-xl flex items-center justify-center active:bg-blue-100">
+                        <button @click="$emit('open-scanner')" class="bg-blue-50 text-blue-600 border-none px-4 rounded-xl flex items-center justify-center active:bg-blue-100 transition-all">
                             <i class="ri-qr-scan-2-line text-xl"></i>
                         </button>
                     </div>

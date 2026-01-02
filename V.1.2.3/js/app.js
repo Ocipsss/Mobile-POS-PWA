@@ -1,4 +1,4 @@
-// js/app.js //
+// Full Replace isi js/app.js dengan ini //
 const { createApp, ref, computed, onMounted, watch } = Vue;
 
 const app = createApp({
@@ -21,18 +21,17 @@ const app = createApp({
     },
     
     setup() {
-        // --- STATE AUTHENTICATION ---
         const isLoggedIn = ref(false);
         const loginData = ref({ email: '', password: '' });
         const isAuthChecking = ref(true);
-
-        // --- STATE UTAMA ---
         const isCloudOnline = ref(false);
         const isOpen = ref(false);
         const activePage = ref('Penjualan');
         const cart = ref([]); 
         const menuGroupsData = ref([]);
         const storeSettings = ref({ storeName: 'SINAR PAGI', address: 'Jl. Raya No. 1', phone: '08123xxxx' });
+        const isScannerOpen = ref(false);
+        let html5QrCode = null;
 
         const isConfirmModalOpen = ref(false);
         const isSuccessModalOpen = ref(false);
@@ -52,7 +51,6 @@ const app = createApp({
             listMemberDB.value = await db.members.toArray();
         };
 
-        // --- LOGIKA LOGIN / LOGOUT ---
         const handleLogin = async () => {
             if (!loginData.value.email || !loginData.value.password) return alert("Isi email dan password!");
             try {
@@ -63,22 +61,16 @@ const app = createApp({
         };
 
         const handleLogout = () => {
-            if (confirm("Keluar dari sistem?")) {
-                firebase.auth().signOut();
-            }
+            if (confirm("Keluar dari sistem?")) firebase.auth().signOut();
         };
 
         onMounted(() => {
-            // Monitor status login Firebase
             firebase.auth().onAuthStateChanged((user) => {
                 isAuthChecking.value = false;
                 if (user) {
                     isLoggedIn.value = true;
-                    // Monitor koneksi cloud hanya jika sudah login
                     if (typeof fdb !== 'undefined') {
-                        fdb.ref(".info/connected").on("value", (snap) => {
-                            isCloudOnline.value = snap.val() === true;
-                        });
+                        fdb.ref(".info/connected").on("value", (snap) => isCloudOnline.value = snap.val() === true);
                     }
                     refreshData();
                 } else {
@@ -87,20 +79,46 @@ const app = createApp({
             });
         });
 
-        watch(isMemberModalOpen, async (val) => { 
-            if (val) listMemberDB.value = await db.members.toArray(); 
-        });
+        // BARCODE SCANNER LOGIC
+        const startScanner = () => {
+            isScannerOpen.value = true;
+            setTimeout(() => {
+                html5QrCode = new Html5Qrcode("reader");
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 15, qrbox: { width: 250, height: 150 } },
+                    async (decodedText) => {
+                        const product = await db.products.where('code').equals(decodedText).first();
+                        if (product) {
+                            if (navigator.vibrate) navigator.vibrate(100);
+                            addBySearch(product);
+                            stopScanner();
+                        } else {
+                            alert("Produk tidak ditemukan: " + decodedText);
+                            stopScanner();
+                        }
+                    }
+                ).catch(err => {
+                    console.error(err);
+                    isScannerOpen.value = false;
+                });
+            }, 300);
+        };
 
-        // --- PERBAIKAN LOGIKA FILTER MEMBER ---
+        const stopScanner = () => {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    isScannerOpen.value = false;
+                });
+            } else {
+                isScannerOpen.value = false;
+            }
+        };
+
         const filteredMembers = computed(() => {
             const q = memberSearchQuery.value.toLowerCase();
-            if (!q) return listMemberDB.value;
-
-            return listMemberDB.value.filter(m => {
-                const nameMatch = m.name && m.name.toLowerCase().includes(q);
-                const idMatch = m.id && m.id.toString().toLowerCase().includes(q);
-                return nameMatch || idMatch;
-            });
+            return !q ? listMemberDB.value : listMemberDB.value.filter(m => m.name.toLowerCase().includes(q) || m.id.toString().includes(q));
         });
 
         const totalBayar = computed(() => cart.value.reduce((sum, item) => sum + (item.price_sell * item.qty), 0));
@@ -108,7 +126,7 @@ const app = createApp({
         const prosesBayar = () => {
             if (cart.value.length === 0) return;
             if (payMethod.value === 'tempo' && !selectedMember.value) {
-                alert("Pilih Member untuk metode TEMPO!");
+                alert("Pilih Member!");
                 isMemberModalOpen.value = true;
                 return;
             }
@@ -119,51 +137,22 @@ const app = createApp({
             isConfirmModalOpen.value = false;
             const total = totalBayar.value;
             let paid = (payMethod.value === 'cash') ? (cashAmount.value ? Number(cashAmount.value) : total) : 0;
-            let statusBaru = payMethod.value === 'cash' ? 'lunas' : 'hutang';
 
             try {
-                let totalProfitTransaksi = 0;
-                const mappedItems = cart.value.map(item => {
-                    const modal = Number(item.price_modal || 0);
-                    const jual = Number(item.price_sell || 0);
-                    const itemProfit = (jual - modal) * item.qty;
-                    totalProfitTransaksi += itemProfit;
-
-                    return {
-                        id: item.id,
-                        name: item.name,
-                        qty: item.qty,
-                        price_modal: modal,
-                        price_sell: jual,
-                        profit: itemProfit
-                    };
-                });
-
                 const transData = {
                     date: new Date().toISOString(),
                     total: total,
                     memberId: selectedMember.value ? selectedMember.value.id : null,
-                    items: mappedItems,
+                    items: cart.value.map(i => ({...i})),
                     paymentMethod: payMethod.value,
                     amountPaid: paid,
-                    change: (payMethod.value === 'cash' && paid > total) ? (paid - total) : 0,
-                    status: statusBaru,
-                    payments: [],
-                    kasir: localStorage.getItem('activeKasir') || 'Pemilik'
+                    change: (paid > total) ? (paid - total) : 0,
+                    status: payMethod.value === 'cash' ? 'lunas' : 'hutang',
+                    kasir: 'Admin'
                 };
 
                 const id = await db.transactions.add(transData);
                 lastTransaction.value = { id, ...transData };
-
-                if (selectedMember.value && selectedMember.value.id) {
-                    const poinBaru = Math.floor(totalProfitTransaksi * 0.02);
-                    // Gunakan ID string untuk pencarian member
-                    await db.members.where('id').equals(selectedMember.value.id).modify(m => {
-                        m.total_spending = (Number(m.total_spending) || 0) + total;
-                        m.points = (Number(m.points) || 0) + poinBaru;
-                    });
-                    await refreshData();
-                }
 
                 for (const item of cart.value) {
                     const p = await db.products.get(item.id);
@@ -172,22 +161,19 @@ const app = createApp({
                 
                 isSuccessModalOpen.value = true;
                 cart.value = []; selectedMember.value = null; cashAmount.value = null; payMethod.value = 'null';
-            } catch (err) { alert("Error: " + err.message); }
+            } catch (err) { alert(err.message); }
         };
 
         const cetakStrukTerakhir = () => {
             isSuccessModalOpen.value = false;
-            setTimeout(() => { window.print(); }, 500);
+            setTimeout(() => window.print(), 500);
         };
 
         const handleGlobalSearch = async () => {
             if (!globalSearchQuery.value) { searchResults.value = []; return; }
             const query = globalSearchQuery.value.toLowerCase();
             const all = await db.products.toArray();
-            searchResults.value = all.filter(p => 
-                (p.name && p.name.toLowerCase().includes(query)) || 
-                (p.code && p.code.toLowerCase().includes(query))
-            ).slice(0, 5); 
+            searchResults.value = all.filter(p => (p.name?.toLowerCase().includes(query)) || (p.code?.includes(query))).slice(0, 5); 
         };
 
         const addBySearch = (product) => {
@@ -200,17 +186,11 @@ const app = createApp({
         
         const getComponent = (pageName) => {
             const map = {
-                'Penjualan': 'page-penjualan',
-                'Tambah Produk': 'page-tambah-produk',
-                'Kategori Produk': 'page-kategori',
-                'Daftar Produk': 'page-daftar-produk',
-                'Data Member': 'page-data-member',
-                'Pengaturan': 'page-pengaturan',
-                'Laporan Harian': 'page-laporan-harian',
-                'Stock Monitor': 'page-stock-monitor',
-                'Piutang Penjualan': 'page-piutang-penjualan',
-                'Dashboard': 'page-dashboard',
-                'Laba Rugi': 'page-laba-rugi',
+                'Penjualan': 'page-penjualan', 'Tambah Produk': 'page-tambah-produk',
+                'Kategori Produk': 'page-kategori', 'Daftar Produk': 'page-daftar-produk',
+                'Data Member': 'page-data-member', 'Pengaturan': 'page-pengaturan',
+                'Laporan Harian': 'page-laporan-harian', 'Stock Monitor': 'page-stock-monitor',
+                'Piutang Penjualan': 'page-piutang-penjualan', 'Dashboard': 'page-dashboard', 'Laba Rugi': 'page-laba-rugi'
             };
             return map[pageName] || 'page-placeholder';
         };
@@ -221,8 +201,8 @@ const app = createApp({
             payMethod, cashAmount, lastTransaction, storeSettings, isCloudOnline,
             menuGroups: menuGroupsData, isMemberModalOpen, selectedMember, 
             memberSearchQuery, filteredMembers, globalSearchQuery, searchResults, 
-            handleGlobalSearch, addBySearch,
-            isConfirmModalOpen, isSuccessModalOpen, eksekusiBayar, cetakStrukTerakhir          
+            handleGlobalSearch, addBySearch, isConfirmModalOpen, isSuccessModalOpen, 
+            eksekusiBayar, cetakStrukTerakhir, isScannerOpen, startScanner, stopScanner          
         }
     }
 });
