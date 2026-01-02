@@ -7,11 +7,34 @@ const PagePengaturan = {
             members: 0
         });
 
-        // Ambil ringkasan data untuk info kasir
-        const loadStats = async () => {
+        // State untuk Pengaturan Toko & Printer
+        const storeSettings = Vue.ref({
+            storeName: 'SINAR PAGI',
+            address: 'Jl. Raya Utama No. 01',
+            phone: '0812-3456-7890',
+            footerNote: 'Terima Kasih Atas Kunjungan Anda'
+        });
+
+        // Load data awal
+        const loadAllData = async () => {
+            // Load Statistik
             stats.value.products = await db.products.count();
             stats.value.transactions = await db.transactions.count();
             stats.value.members = await db.members.count();
+
+            // Load Pengaturan dari LocalStorage
+            const savedSettings = localStorage.getItem('sinar_pagi_settings');
+            if (savedSettings) {
+                storeSettings.value = JSON.parse(savedSettings);
+            }
+        };
+
+        // Simpan Pengaturan
+        const saveSettings = () => {
+            localStorage.setItem('sinar_pagi_settings', JSON.stringify(storeSettings.value));
+            alert("✅ Pengaturan Toko Berhasil Disimpan!");
+            // Memicu event agar komponen lain (seperti Struk) terupdate
+            window.location.reload();
         };
 
         const handleExport = async () => {
@@ -33,7 +56,6 @@ const PagePengaturan = {
             event.target.value = '';
         };
 
-        // --- FUNGSI RESET DATA TOTAL ---
         const handleResetData = async () => {
             const murni = confirm("PERINGATAN KERAS!\n\nSemua data (Produk, Transaksi, Member, Kategori) akan DIHAPUS PERMANEN dari perangkat ini dan juga dari CLOUD (Firebase).\n\nApakah Anda benar-benar yakin?");
             
@@ -41,15 +63,12 @@ const PagePengaturan = {
                 const doubleCheck = confirm("Tindakan ini tidak bisa dibatalkan. Klik OK untuk menghapus semuanya.");
                 if (doubleCheck) {
                     try {
-                        // 1. Hapus di Firebase (Cloud)
                         if (typeof fdb !== 'undefined') {
                             const tables = ['products', 'categories', 'transactions', 'members'];
                             for (const t of tables) {
                                 await fdb.ref(t).remove();
                             }
                         }
-
-                        // 2. Hapus di Dexie (Local)
                         await db.products.clear();
                         await db.categories.clear();
                         await db.transactions.clear();
@@ -64,12 +83,12 @@ const PagePengaturan = {
             }
         };
 
-        Vue.onMounted(loadStats);
+        Vue.onMounted(loadAllData);
 
-        return { stats, handleExport, handleImport, handleResetData };
+        return { stats, storeSettings, saveSettings, handleExport, handleImport, handleResetData };
     },
     template: `
-    <div class="p-4 flex flex-col gap-6">
+    <div class="p-4 flex flex-col gap-6 pb-24">
         
         <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-[2rem] text-white shadow-xl">
             <h3 class="text-sm font-black uppercase tracking-widest opacity-80 m-0">Status Data</h3>
@@ -86,6 +105,34 @@ const PagePengaturan = {
                     <div class="text-xl font-black">{{ stats.members }}</div>
                     <div class="text-[8px] font-bold uppercase opacity-60">Member</div>
                 </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-4">
+            <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2">Identitas Toko & Struk</h4>
+            <div class="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col gap-4">
+                <div>
+                    <label class="text-[9px] font-black text-gray-400 uppercase ml-2 mb-1 block">Nama Toko (Header)</label>
+                    <input v-model="storeSettings.storeName" type="text" class="form-control font-bold" placeholder="Contoh: Sinar Pagi POS">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black text-gray-400 uppercase ml-2 mb-1 block">Alamat</label>
+                    <input v-model="storeSettings.address" type="text" class="form-control" placeholder="Alamat lengkap...">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[9px] font-black text-gray-400 uppercase ml-2 mb-1 block">No. Telepon</label>
+                        <input v-model="storeSettings.phone" type="text" class="form-control" placeholder="0812...">
+                    </div>
+                    <div>
+                        <label class="text-[9px] font-black text-gray-400 uppercase ml-2 mb-1 block">Pesan Bawah Struk</label>
+                        <input v-model="storeSettings.footerNote" type="text" class="form-control" placeholder="Terima kasih...">
+                    </div>
+                </div>
+                <button @click="saveSettings" 
+                        class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-blue-100 active:scale-95 transition-all tracking-widest mt-2">
+                    Simpan Perubahan
+                </button>
             </div>
         </div>
 
@@ -116,11 +163,11 @@ const PagePengaturan = {
             </label>
         </div>
 
-        <div class="mt-4 flex flex-col gap-4">
+        <div class="flex flex-col gap-4">
             <h4 class="text-[10px] font-black text-red-400 uppercase tracking-[0.2em] ml-2">Zona Bahaya</h4>
             <div class="bg-red-50 p-6 rounded-[2rem] border-2 border-dashed border-red-100">
-                <p class="text-[10px] text-red-500 font-bold mb-4 leading-relaxed uppercase tracking-tighter">
-                    Menghapus data akan membersihkan seluruh produk, transaksi, dan member secara permanen dari Cloud dan HP ini.
+                <p class="text-[10px] text-red-500 font-bold mb-4 leading-relaxed uppercase tracking-tighter text-center">
+                    Menghapus data akan membersihkan seluruh database secara permanen.
                 </p>
                 <button @click="handleResetData" 
                         class="w-full py-4 bg-red-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg shadow-red-100 active:scale-95 transition-all tracking-widest">

@@ -1,3 +1,4 @@
+// js/app.js //
 const { createApp, ref, computed, onMounted, watch } = Vue;
 
 const app = createApp({
@@ -86,11 +87,20 @@ const app = createApp({
             });
         });
 
-        watch(isMemberModalOpen, async (val) => { if (val) listMemberDB.value = await db.members.toArray(); });
+        watch(isMemberModalOpen, async (val) => { 
+            if (val) listMemberDB.value = await db.members.toArray(); 
+        });
 
+        // --- PERBAIKAN LOGIKA FILTER MEMBER ---
         const filteredMembers = computed(() => {
             const q = memberSearchQuery.value.toLowerCase();
-            return q ? listMemberDB.value.filter(m => m.name.toLowerCase().includes(q) || m.id.toString().includes(q)) : listMemberDB.value;
+            if (!q) return listMemberDB.value;
+
+            return listMemberDB.value.filter(m => {
+                const nameMatch = m.name && m.name.toLowerCase().includes(q);
+                const idMatch = m.id && m.id.toString().toLowerCase().includes(q);
+                return nameMatch || idMatch;
+            });
         });
 
         const totalBayar = computed(() => cart.value.reduce((sum, item) => sum + (item.price_sell * item.qty), 0));
@@ -147,6 +157,7 @@ const app = createApp({
 
                 if (selectedMember.value && selectedMember.value.id) {
                     const poinBaru = Math.floor(totalProfitTransaksi * 0.02);
+                    // Gunakan ID string untuk pencarian member
                     await db.members.where('id').equals(selectedMember.value.id).modify(m => {
                         m.total_spending = (Number(m.total_spending) || 0) + total;
                         m.points = (Number(m.points) || 0) + poinBaru;
@@ -173,7 +184,10 @@ const app = createApp({
             if (!globalSearchQuery.value) { searchResults.value = []; return; }
             const query = globalSearchQuery.value.toLowerCase();
             const all = await db.products.toArray();
-            searchResults.value = all.filter(p => p.name?.toLowerCase().includes(query) || p.code?.toLowerCase().includes(query)).slice(0, 5); 
+            searchResults.value = all.filter(p => 
+                (p.name && p.name.toLowerCase().includes(query)) || 
+                (p.code && p.code.toLowerCase().includes(query))
+            ).slice(0, 5); 
         };
 
         const addBySearch = (product) => {

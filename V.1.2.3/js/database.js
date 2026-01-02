@@ -1,14 +1,15 @@
 // js/database.js //
 const db = new Dexie("SinarPagiDB");
 
-// Versi 9 - Struktur lengkap dengan index loyalty
-db.version(9).stores({
+db.version(10).stores({ // Naikkan versi ke 10 karena skema berubah
     products: '++id, name, code, category, price_modal, price_sell, qty, unit',
     categories: '++id, name',
     transactions: '++id, date, total, memberId, paymentMethod, amountPaid, change, status',
-    members: '++id, name, phone, address, total_spending, points', 
+    members: 'id, name, phone, address, total_spending, points', // ID dihapus ++ nya karena manual string
     settings: 'id, storeName'
 });
+// ... sisa kode syncToCloud dan syncFromCloud tetap sama ...
+
 
 // --- FUNGSI SINKRONISASI KELUAR (LOCAL -> CLOUD) ---
 const syncToCloud = (table, id, data) => {

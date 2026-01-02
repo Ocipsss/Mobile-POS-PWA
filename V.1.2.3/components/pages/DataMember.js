@@ -3,38 +3,49 @@ const PageDataMember = {
     setup() {
         const members = Vue.ref([]);
         const showModal = Vue.ref(false);
-        const newMember = Vue.ref({ id: '', name: '', address: '' });
+        const newMember = Vue.ref({ name: '', address: '' }); // ID dihapus dari form input
 
-        // Helper untuk format rupiah agar tampilan rapi
         const formatRupiah = (val) => {
             if (!val) return 'Rp 0';
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
         };
 
+        // Fungsi Generate ID Unik SP-XXXX
+        const generateUniqueId = async () => {
+            let isUnique = false;
+            let finalId = '';
+            while (!isUnique) {
+                const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+                finalId = `SP-${randomStr}`;
+                const existing = await db.members.get(finalId);
+                if (!existing) isUnique = true;
+            }
+            return finalId;
+        };
+
         const loadMembers = async () => {
-            // Kita ambil dan urutkan berdasarkan total belanja terbesar (Top Member)
             const data = await db.members.toArray();
             members.value = data.sort((a, b) => (b.total_spending || 0) - (a.total_spending || 0));
         };
 
         const saveMember = async () => {
-            if (!newMember.value.name || !newMember.value.id) {
-                return alert("ID Member dan Nama wajib diisi!");
+            if (!newMember.value.name) {
+                return alert("Nama pelanggan wajib diisi!");
             }
             
             try {
-                const existing = await db.members.get(newMember.value.id);
-                if (existing) return alert("ID Member sudah terdaftar!");
-
+                const autoId = await generateUniqueId(); // Generate ID di sini
+                
                 await db.members.add({ 
-                    id: newMember.value.id,
+                    id: autoId,
                     name: newMember.value.name,
                     address: newMember.value.address || '-',
-                    total_spending: 0, // Inisialisasi awal
-                    points: 0          // Inisialisasi awal
+                    total_spending: 0,
+                    points: 0
                 });
                 
-                newMember.value = { id: '', name: '', address: '' };
+                alert(`Member Berhasil Ditambah!\nID: ${autoId}`);
+                newMember.value = { name: '', address: '' };
                 showModal.value = false;
                 loadMembers();
             } catch (err) {
@@ -111,7 +122,7 @@ const PageDataMember = {
             <div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm">
                 <div class="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl animate-slide-up">
                     <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-lg font-black text-gray-800 uppercase tracking-tight">Form Input</h3>
+                        <h3 class="text-lg font-black text-gray-800 uppercase tracking-tight">Tambah Member</h3>
                         <button @click="showModal = false" class="bg-gray-100 border-none w-8 h-8 rounded-full flex items-center justify-center text-gray-400">
                             <i class="ri-close-line"></i>
                         </button>
@@ -119,22 +130,21 @@ const PageDataMember = {
                     
                     <div class="flex flex-col gap-4">
                         <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-black text-gray-400 ml-2 uppercase">1. Nama Pelanggan</label>
-                            <input v-model="newMember.name" type="text" placeholder="..." class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold shadow-inner">
+                            <label class="text-[10px] font-black text-gray-400 ml-2 uppercase tracking-widest">1. Nama Pelanggan</label>
+                            <input v-model="newMember.name" type="text" placeholder="Masukkan nama..." class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 ring-blue-500 outline-none">
                         </div>
 
                         <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-black text-gray-400 ml-2 uppercase">2. ID Member (Kunci)</label>
-                            <input v-model="newMember.id" type="text" placeholder="..." class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold shadow-inner uppercase">
+                            <label class="text-[10px] font-black text-gray-400 ml-2 uppercase tracking-widest">2. Alamat (Opsional)</label>
+                            <textarea v-model="newMember.address" placeholder="Alamat lengkap..." class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 ring-blue-500 outline-none" rows="2"></textarea>
                         </div>
 
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-black text-gray-400 ml-2 uppercase">3. Alamat (Opsional)</label>
-                            <textarea v-model="newMember.address" placeholder="..." class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold shadow-inner" rows="2"></textarea>
+                        <div class="p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                            <p class="text-[9px] text-blue-600 font-bold uppercase tracking-tighter text-center">ID Member akan dibuat otomatis oleh sistem</p>
                         </div>
                         
                         <button @click="saveMember" class="w-full py-4 bg-blue-600 text-white rounded-2xl border-none font-black text-xs uppercase shadow-lg active:scale-95 transition-all mt-2 tracking-widest">
-                            SIMPAN DATA
+                            KONFIRMASI SIMPAN
                         </button>
                     </div>
                 </div>
