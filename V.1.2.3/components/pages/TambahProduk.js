@@ -1,7 +1,6 @@
 // components/pages/TambahProduk.js //
 
 const PageTambahProduk = {
-    // Menambahkan emits agar komponen bisa mengirim sinyal ke app.js
     emits: ['open-scanner'],
     setup(props, { emit }) {
         const product = Vue.ref({
@@ -30,7 +29,6 @@ const PageTambahProduk = {
             if (field === 'price_sell') displaySell.value = formatDisplay(numValue);
         };
 
-        // FUNGSI FOTO YANG LENGKAP
         const takePhoto = () => {
             const input = document.createElement('input');
             input.type = 'file';
@@ -61,17 +59,36 @@ const PageTambahProduk = {
             input.click();
         };
 
+        // REVISI FUNGSI SAVE (LOKAL + FIREBASE)
         const saveProduct = async () => {
             if(!product.value.name || !product.value.price_sell) {
                 alert("Nama dan Harga Jual wajib diisi!");
                 return;
             }
             try {
-                await db.products.add(JSON.parse(JSON.stringify(product.value)));
-                alert("Produk Berhasil Disimpan!");
+                // 1. Simpan ke database lokal (Dexie)
+                const productData = JSON.parse(JSON.stringify(product.value));
+                const localId = await db.products.add(productData);
+
+                // 2. Simpan ke Firebase (Cloud)
+                // Kita gunakan localId sebagai key agar data sinkron
+                if (typeof fdb !== 'undefined') {
+                    await fdb.ref('products/' + localId).set({
+                        ...productData,
+                        id: localId,
+                        updatedAt: new Date().toISOString()
+                    });
+                }
+
+                alert("Produk Berhasil Disimpan ke Cloud!");
+                
+                // Reset Form
                 product.value = { image: null, name: '', code: '', category: 'Umum', unit: 'pcs', price_modal: 0, price_sell: 0, qty: 0 };
                 displayModal.value = ""; displaySell.value = "";
-            } catch (err) { alert("Gagal menyimpan"); }
+            } catch (err) { 
+                console.error("Firebase Error:", err);
+                alert("Gagal menyimpan ke cloud: " + err.message); 
+            }
         };
 
         Vue.onMounted(loadCategories);
