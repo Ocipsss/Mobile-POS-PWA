@@ -1,7 +1,16 @@
+// components/pages/LaporanLabaRugi.js //
+
 window.PageLabaRugi = {
     template: `
         <div class="p-6 space-y-7 pb-24 bg-white min-h-full">
             
+            <div v-if="isLoading" class="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+                <div class="flex flex-col items-center">
+                    <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-4">Syncing Cloud...</p>
+                </div>
+            </div>
+
             <div class="flex items-center bg-slate-50 rounded-2xl p-1.5 border border-slate-100">
                 <div class="flex-1">
                     <input type="date" v-model="filter.start" @change="loadData" 
@@ -58,25 +67,67 @@ window.PageLabaRugi = {
                 <div class="h-[1px] w-8 bg-slate-100"></div>
             </div>
 
-            <div v-if="stats.count === 0" class="py-10 text-center text-slate-200">
+            <div v-if="stats.count === 0 && !isLoading" class="py-10 text-center text-slate-200">
                 <i class="ri-bar-chart-2-line text-4xl opacity-20"></i>
+                <p class="text-[8px] font-black uppercase mt-2">No Data Found</p>
             </div>
         </div>
     `,
     setup() {
         const stats = Vue.ref({ totalOmzet: 0, totalModal: 0, totalLabaBersih: 0, count: 0 });
+        const isLoading = Vue.ref(false);
         const now = new Date();
         const filter = Vue.ref({
             start: new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0],
-            end: new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+            end: new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().split('T')[0]
         });
 
         const loadData = async () => {
+            isLoading.value = true;
             const startStr = filter.value.start + "T00:00:00.000Z";
             const endStr = filter.value.end + "T23:59:59.999Z";
-            if (window.hitungLabaRugi) {
-                const res = await window.hitungLabaRugi(startStr, endStr);
-                stats.value = res;
+
+            try {
+                // SINKRONISASI CLOUD (FIREBASE)
+                if (typeof fdb !== 'undefined') {
+                    const snapshot = await fdb.ref('transactions')
+                        .orderByChild('date')
+                        .startAt(startStr)
+                        .endAt(endStr)
+                        .once('value');
+                    
+                    const data = snapshot.val();
+                    let omzet = 0;
+                    let modal = 0;
+                    let count = 0;
+
+                    if (data) {
+                        Object.values(data).forEach(trx => {
+                            omzet += (trx.total || 0);
+                            count++;
+                            if (trx.items) {
+                                trx.items.forEach(item => {
+                                    const hModal = item.price_modal || item.price_sell || 0;
+                                    modal += (hModal * item.qty);
+                                });
+                            }
+                        });
+                    }
+
+                    stats.value = {
+                        totalOmzet: omzet,
+                        totalModal: modal,
+                        totalLabaBersih: omzet - modal,
+                        count: count
+                    };
+                } else if (window.hitungLabaRugi) {
+                    // Fallback jika Firebase tidak tersedia
+                    stats.value = await window.hitungLabaRugi(startStr, endStr);
+                }
+            } catch (err) {
+                console.error("Laporan Error:", err);
+            } finally {
+                isLoading.value = false;
             }
         };
 
@@ -91,6 +142,6 @@ window.PageLabaRugi = {
         };
 
         Vue.onMounted(loadData);
-        return { stats, filter, loadData, calculateMargin, calculateAvg };
+        return { stats, filter, loadData, calculateMargin, calculateAvg, isLoading };
     }
 };

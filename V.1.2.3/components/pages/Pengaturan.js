@@ -22,19 +22,50 @@ const PagePengaturan = {
             stats.value.transactions = await db.transactions.count();
             stats.value.members = await db.members.count();
 
-            // Load Pengaturan dari LocalStorage
-            const savedSettings = localStorage.getItem('sinar_pagi_settings');
-            if (savedSettings) {
-                storeSettings.value = JSON.parse(savedSettings);
+            // 1. Load dari Cloud (Firebase) jika ada
+            if (typeof fdb !== 'undefined') {
+                try {
+                    const snapshot = await fdb.ref('settings/store').once('value');
+                    const cloudData = snapshot.val();
+                    if (cloudData) {
+                        storeSettings.value = cloudData;
+                        // Update localstorage agar tetap sinkron
+                        localStorage.setItem('sinar_pagi_settings', JSON.stringify(cloudData));
+                    } else {
+                        // 2. Jika cloud kosong, baru ambil dari LocalStorage
+                        const savedSettings = localStorage.getItem('sinar_pagi_settings');
+                        if (savedSettings) {
+                            storeSettings.value = JSON.parse(savedSettings);
+                        }
+                    }
+                } catch (err) {
+                    console.error("Gagal memuat pengaturan cloud:", err);
+                }
             }
         };
 
-        // Simpan Pengaturan
-        const saveSettings = () => {
-            localStorage.setItem('sinar_pagi_settings', JSON.stringify(storeSettings.value));
-            alert("✅ Pengaturan Toko Berhasil Disimpan!");
-            // Memicu event agar komponen lain (seperti Struk) terupdate
-            window.location.reload();
+        // Simpan Pengaturan ke Lokal & Cloud
+        const saveSettings = async () => {
+            try {
+                // Simpan ke LocalStorage
+                localStorage.setItem('sinar_pagi_settings', JSON.stringify(storeSettings.value));
+
+                // Simpan ke Firebase (Cloud Sync)
+                if (typeof fdb !== 'undefined') {
+                    await fdb.ref('settings/store').set({
+                        ...storeSettings.value,
+                        updatedAt: new Date().toISOString()
+                    });
+                }
+
+                alert("✅ Pengaturan Toko Berhasil Disimpan ke Cloud!");
+                // Memicu event agar komponen lain (seperti Struk) terupdate
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            } catch (err) {
+                alert("❌ Gagal menyimpan ke cloud: " + err.message);
+            }
         };
 
         const handleExport = async () => {
@@ -64,7 +95,7 @@ const PagePengaturan = {
                 if (doubleCheck) {
                     try {
                         if (typeof fdb !== 'undefined') {
-                            const tables = ['products', 'categories', 'transactions', 'members'];
+                            const tables = ['products', 'categories', 'transactions', 'members', 'settings'];
                             for (const t of tables) {
                                 await fdb.ref(t).remove();
                             }
@@ -130,8 +161,9 @@ const PagePengaturan = {
                     </div>
                 </div>
                 <button @click="saveSettings" 
-                        class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-blue-100 active:scale-95 transition-all tracking-widest mt-2">
-                    Simpan Perubahan
+                        class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-blue-100 active:scale-95 transition-all tracking-widest mt-2 flex items-center justify-center gap-2">
+                    <i class="ri-cloud-line text-lg"></i>
+                    Simpan Ke Cloud
                 </button>
             </div>
         </div>
@@ -178,7 +210,7 @@ const PagePengaturan = {
 
         <div class="mt-4 p-6 text-center">
             <i class="ri-smartphone-line text-2xl text-gray-300"></i>
-            <div class="text-[9px] font-black text-gray-400 uppercase mt-2 tracking-widest">Sinar Pagi POS v1.3.0</div>
+            <div class="text-[9px] font-black text-gray-400 uppercase mt-2 tracking-widest">Sinar Pagi POS v1.3.1</div>
             <div class="text-[8px] text-gray-300 font-bold uppercase">Database: IndexedDB + Firebase Cloud</div>
         </div>
 

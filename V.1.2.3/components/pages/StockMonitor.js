@@ -2,11 +2,34 @@ window.PageStockMonitor = {
     setup() {
         const products = Vue.ref([]);
         const filterStatus = Vue.ref('all');
+        const isLoading = Vue.ref(false);
 
         const loadStock = async () => {
-            const allProducts = await db.products.toArray();
-            // Urutkan berdasarkan stok paling sedikit
-            products.value = allProducts.sort((a, b) => a.qty - b.qty);
+            isLoading.value = true;
+            try {
+                // Ambil data dari Firebase agar sinkron antar perangkat
+                if (typeof fdb !== 'undefined') {
+                    const snapshot = await fdb.ref('products').once('value');
+                    const data = snapshot.val();
+                    if (data) {
+                        const cloudProducts = Object.values(data);
+                        // Urutkan berdasarkan stok paling sedikit
+                        products.value = cloudProducts.sort((a, b) => a.qty - b.qty);
+                        
+                        // Opsional: Update database lokal agar tetap sinkron saat offline
+                        await db.products.clear();
+                        await db.products.bulkAdd(cloudProducts);
+                    }
+                } else {
+                    // Fallback ke lokal jika tidak ada koneksi
+                    const allProducts = await db.products.toArray();
+                    products.value = allProducts.sort((a, b) => a.qty - b.qty);
+                }
+            } catch (err) {
+                console.error("Gagal load stok:", err);
+            } finally {
+                isLoading.value = false;
+            }
         };
 
         const filteredProducts = Vue.computed(() => {
@@ -29,11 +52,14 @@ window.PageStockMonitor = {
 
         Vue.onMounted(loadStock);
 
-        return { filteredProducts, filterStatus, getStockTheme, getStatusLabel, loadStock };
+        return { filteredProducts, filterStatus, getStockTheme, getStatusLabel, loadStock, isLoading };
     },
     template: `
     <div class="p-6 space-y-6 pb-24 bg-white min-h-full">
-        
+        <div v-if="isLoading" class="text-center py-2">
+            <span class="text-[8px] font-black text-blue-500 uppercase animate-pulse">Sinkronisasi Stok...</span>
+        </div>
+
         <div class="flex p-1 bg-slate-50 rounded-2xl border border-slate-100">
             <button @click="filterStatus = 'all'"
                 :class="filterStatus === 'all' ? 'bg-blue-500 text-white shadow-md' : 'text-slate-400 bg-transparent'"
@@ -75,7 +101,7 @@ window.PageStockMonitor = {
                     </div>
                 </div>
 
-                <button @click="loadStock" class="w-9 h-9 bg-slate-50 text-slate-300 rounded-full border-none flex items-center justify-center">
+                <button @click="loadStock" class="w-9 h-9 bg-slate-50 text-slate-300 rounded-full border-none flex items-center justify-center active:scale-95">
                     <i class="ri-refresh-line text-lg"></i>
                 </button>
             </div>

@@ -1,5 +1,5 @@
 // components/pages/DaftarProduk.js //
-// v1.5 - Removed Internal Search (Using Global Header) //
+// v1.6 - Added Cloud Sync & Pack Info //
 
 const PageDaftarProduk = {
     setup() {
@@ -44,21 +44,44 @@ const PageDaftarProduk = {
             isEditModalOpen.value = true;
         };
 
+        // REVISI: Update Lokal + Cloud (Firebase)
         const updateProduct = async () => {
             try {
+                // 1. Update ke database lokal (Dexie)
                 await db.products.update(editingProduct.value.id, editingProduct.value);
+                
+                // 2. Update ke Firebase Realtime Database
+                if (typeof fdb !== 'undefined') {
+                    await fdb.ref('products/' + editingProduct.value.id).update({
+                        ...editingProduct.value,
+                        updatedAt: new Date().toISOString()
+                    });
+                }
+
                 isEditModalOpen.value = false;
                 await loadData();
-                alert("Produk berhasil diperbarui!");
+                alert("Produk berhasil diperbarui di Cloud!");
             } catch (err) {
-                alert("Gagal memperbarui produk");
+                console.error("Update Error:", err);
+                alert("Gagal memperbarui produk: " + err.message);
             }
         };
 
+        // REVISI: Hapus Lokal + Cloud (Firebase)
         const deleteProduct = async (id) => {
-            if (confirm("Hapus produk ini secara permanen?")) {
-                await db.products.delete(id);
-                await loadData();
+            if (confirm("Hapus produk ini secara permanen dari Cloud?")) {
+                try {
+                    // Hapus Lokal
+                    await db.products.delete(id);
+                    // Hapus Cloud
+                    if (typeof fdb !== 'undefined') {
+                        await fdb.ref('products/' + id).remove();
+                    }
+                    await loadData();
+                    alert("Produk dihapus!");
+                } catch (err) {
+                    alert("Gagal menghapus produk");
+                }
             }
         };
 
@@ -109,6 +132,13 @@ const PageDaftarProduk = {
 
                     <div class="flex-1 min-w-0">
                         <div class="text-[13px] font-black text-gray-800 truncate leading-tight uppercase">{{ p.name }}</div>
+                        
+                        <div v-if="p.pack_price" class="flex items-center gap-1 mt-0.5">
+                            <span class="text-[9px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded">
+                                Beli: Rp{{ p.pack_price.toLocaleString() }} /{{ p.pack_size }}pcs
+                            </span>
+                        </div>
+
                         <div class="flex items-center gap-2 mt-1">
                             <span class="text-[11px] font-black text-blue-600">{{ formatRupiah(p.price_sell) }}</span>
                             <span class="text-[10px] text-gray-300 font-medium">|</span>

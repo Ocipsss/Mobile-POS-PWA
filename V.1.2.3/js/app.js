@@ -79,7 +79,6 @@ const app = createApp({
             });
         });
 
-        // BARCODE SCANNER LOGIC - UPDATED FOR MULTI-PAGE
         const startScanner = () => {
             isScannerOpen.value = true;
             setTimeout(() => {
@@ -89,18 +88,14 @@ const app = createApp({
                     { fps: 15, qrbox: { width: 250, height: 150 } },
                     async (decodedText) => {
                         if (navigator.vibrate) navigator.vibrate(100);
-
-                        // KASUS 1: JIKA BERADA DI HALAMAN TAMBAH PRODUK
                         if (activePage.value === 'Tambah Produk') {
                             const inputBarcode = document.querySelector('input[placeholder="Scan atau manual..."]');
                             if (inputBarcode) {
                                 inputBarcode.value = decodedText;
-                                // Paksa Vue untuk mengupdate model data
                                 inputBarcode.dispatchEvent(new Event('input', { bubbles: true }));
                                 stopScanner();
                             }
                         } 
-                        // KASUS 2: JIKA BERADA DI HALAMAN PENJUALAN / LAINNYA
                         else {
                             const product = await db.products.where('code').equals(decodedText).first();
                             if (product) {
@@ -165,17 +160,32 @@ const app = createApp({
                     kasir: 'Admin'
                 };
 
+                // 1. Simpan ke Lokal
                 const id = await db.transactions.add(transData);
                 lastTransaction.value = { id, ...transData };
 
+                // 2. Simpan ke Cloud (Firebase)
+                if (typeof fdb !== 'undefined' && isCloudOnline.value) {
+                    await fdb.ref('transactions/' + id).set({ id, ...transData });
+                }
+
+                // 3. Update Stok (Lokal & Cloud)
                 for (const item of cart.value) {
                     const p = await db.products.get(item.id);
-                    if (p) await db.products.update(item.id, { qty: p.qty - item.qty });
+                    if (p) {
+                        const newQty = p.qty - item.qty;
+                        // Update Lokal
+                        await db.products.update(item.id, { qty: newQty });
+                        // Update Cloud
+                        if (typeof fdb !== 'undefined' && isCloudOnline.value) {
+                            await fdb.ref('products/' + item.id).update({ qty: newQty });
+                        }
+                    }
                 }
                 
                 isSuccessModalOpen.value = true;
                 cart.value = []; selectedMember.value = null; cashAmount.value = null; payMethod.value = 'null';
-            } catch (err) { alert(err.message); }
+            } catch (err) { alert("Error: " + err.message); }
         };
 
         const cetakStrukTerakhir = () => {

@@ -2,10 +2,27 @@
 const StrukNota = {
     props: ['transaksi', 'settings'],
     setup(props) {
-        // Ambil pengaturan dari localStorage atau fallback ke props
+        /**
+         * Logic:
+         * Mengambil pengaturan dari localStorage sebagai sumber utama.
+         * Data ini sudah terupdate otomatis dari Firebase saat user membuka tab Pengaturan.
+         */
         const localSettings = Vue.computed(() => {
             const saved = localStorage.getItem('sinar_pagi_settings');
-            return saved ? JSON.parse(saved) : (props.settings || {});
+            if (saved) {
+                try {
+                    return JSON.parse(saved);
+                } catch (e) {
+                    console.error("Format settings rusak:", e);
+                }
+            }
+            // Fallback jika localStorage kosong
+            return props.settings || {
+                storeName: 'SINAR PAGI',
+                address: 'Alamat Belum Diatur',
+                phone: '',
+                footerNote: 'Terima Kasih Atas Kunjungan Anda'
+            };
         });
 
         return { localSettings };
@@ -14,9 +31,9 @@ const StrukNota = {
     <div id="print-section" class="print-only">
         <div class="struk-wrapper">
             <div class="struk-header">
-                <h2 class="store-name">{{ localSettings.storeName || 'SINAR PAGI' }}</h2>
-                <p class="store-address">{{ localSettings.address || 'Alamat Belum Diatur' }}</p>
-                <p class="store-phone">{{ localSettings.phone || '' }}</p>
+                <h2 class="store-name">{{ localSettings.storeName }}</h2>
+                <p class="store-address">{{ localSettings.address }}</p>
+                <p class="store-phone" v-if="localSettings.phone">{{ localSettings.phone }}</p>
             </div>
             
             <div class="struk-divider">--------------------------------</div>
@@ -64,8 +81,8 @@ const StrukNota = {
             <div class="struk-divider">--------------------------------</div>
             
             <div class="struk-footer">
-                <p>{{ localSettings.footerNote || 'Terima Kasih Atas Kunjungan Anda' }}</p>
-                <p>Barang yang sudah dibeli tidak dapat ditukar/dikembalikan</p>
+                <p>{{ localSettings.footerNote }}</p>
+                <p style="font-size: 8px; margin-top: 4px;">Barang yang sudah dibeli tidak dapat ditukar/dikembalikan</p>
             </div>
         </div>
     </div>
