@@ -4,11 +4,13 @@ const PageTambahProduk = {
     emits: ['open-scanner'],
     setup(props, { emit }) {
         const product = Vue.ref({
-            image: null, name: '', code: '', category: 'Umum', unit: 'pcs', price_modal: 0, price_sell: 0, qty: 0
+            image: null, name: '', code: '', category: 'Umum', unit: 'pcs', price_modal: 0, price_sell: 0, qty: 0,
+            pack_price: 0, pack_size: 1
         });
 
         const displayModal = Vue.ref("");
         const displaySell = Vue.ref("");
+        const displayPack = Vue.ref("");
         const listCategories = Vue.ref([]);
 
         const loadCategories = async () => {
@@ -25,8 +27,32 @@ const PageTambahProduk = {
             let rawValue = event.target.value.replace(/\D/g, "");
             let numValue = parseInt(rawValue) || 0;
             product.value[field] = numValue;
+            
             if (field === 'price_modal') displayModal.value = formatDisplay(numValue);
             if (field === 'price_sell') displaySell.value = formatDisplay(numValue);
+            
+            if (field === 'pack_price') {
+                displayPack.value = formatDisplay(numValue);
+                if (product.value.pack_size > 0) {
+                    const unitModal = Math.round(numValue / product.value.pack_size);
+                    product.value.price_modal = unitModal;
+                    displayModal.value = formatDisplay(unitModal);
+                }
+            }
+        };
+
+        const clearInitialSize = () => {
+            if (product.value.pack_size === 1) {
+                product.value.pack_size = null;
+            }
+        };
+
+        const updatePackSize = () => {
+            if (product.value.pack_price > 0 && product.value.pack_size > 0) {
+                const unitModal = Math.round(product.value.pack_price / product.value.pack_size);
+                product.value.price_modal = unitModal;
+                displayModal.value = formatDisplay(unitModal);
+            }
         };
 
         const takePhoto = () => {
@@ -59,19 +85,15 @@ const PageTambahProduk = {
             input.click();
         };
 
-        // REVISI FUNGSI SAVE (LOKAL + FIREBASE)
         const saveProduct = async () => {
             if(!product.value.name || !product.value.price_sell) {
                 alert("Nama dan Harga Jual wajib diisi!");
                 return;
             }
             try {
-                // 1. Simpan ke database lokal (Dexie)
                 const productData = JSON.parse(JSON.stringify(product.value));
                 const localId = await db.products.add(productData);
 
-                // 2. Simpan ke Firebase (Cloud)
-                // Kita gunakan localId sebagai key agar data sinkron
                 if (typeof fdb !== 'undefined') {
                     await fdb.ref('products/' + localId).set({
                         ...productData,
@@ -80,20 +102,17 @@ const PageTambahProduk = {
                     });
                 }
 
-                alert("Produk Berhasil Disimpan ke Cloud!");
-                
-                // Reset Form
-                product.value = { image: null, name: '', code: '', category: 'Umum', unit: 'pcs', price_modal: 0, price_sell: 0, qty: 0 };
-                displayModal.value = ""; displaySell.value = "";
+                alert("Produk Berhasil Disimpan!");
+                product.value = { image: null, name: '', code: '', category: 'Umum', unit: 'pcs', price_modal: 0, price_sell: 0, qty: 0, pack_price: 0, pack_size: 1 };
+                displayModal.value = ""; displaySell.value = ""; displayPack.value = "";
             } catch (err) { 
-                console.error("Firebase Error:", err);
-                alert("Gagal menyimpan ke cloud: " + err.message); 
+                alert("Gagal menyimpan: " + err.message); 
             }
         };
 
         Vue.onMounted(loadCategories);
 
-        return { product, takePhoto, saveProduct, displayModal, displaySell, updateNumber, listCategories, emit };
+        return { product, takePhoto, saveProduct, displayModal, displaySell, displayPack, updateNumber, updatePackSize, clearInitialSize, listCategories, emit };
     },
     template: `
         <div class="flex flex-col gap-3 pb-24">
@@ -124,34 +143,53 @@ const PageTambahProduk = {
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Kategori</label>
-                    <select v-model="product.category" class="form-control">
-                        <option value="Umum">Umum</option>
-                        <option v-for="cat in listCategories" :key="cat.id" :value="cat.name">{{ cat.name }}</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Satuan</label>
-                    <select v-model="product.unit" class="form-control">
-                        <option value="pcs">pcs</option>
-                        <option value="bks">bks</option>
-                        <option value="btg">btg</option>
-                        <option value="rtg">rtg</option>
-                    </select>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="form-group">
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Kategori</label>
+                        <select v-model="product.category" class="form-control">
+                            <option value="Umum">Umum</option>
+                            <option v-for="cat in listCategories" :key="cat.id" :value="cat.name">{{ cat.name }}</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Satuan</label>
+                        <select v-model="product.unit" class="form-control">
+                            <option value="pcs">pcs</option>
+                            <option value="bks">bks</option>
+                            <option value="btg">btg</option>
+                            <option value="rtg">rtg</option>
+                        </select>
+                    </div>
                 </div>
 
                 <hr class="border-gray-50 my-1">
 
-                <div class="form-group">
-                    <label class="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1 block">Harga Modal</label>
-                    <input :value="displayModal" @input="updateNumber('price_modal', $event)" type="text" inputmode="numeric" class="form-control font-bold text-red-600 bg-red-50/20" placeholder="0">
+                <div class="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex flex-col gap-3">
+                    <div class="flex justify-between items-center px-1">
+                        <span class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Kalkulator Grosir</span>
+                        <i class="ri-calculator-line text-blue-400"></i>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="form-group">
+                            <label class="text-[9px] font-black text-gray-400 uppercase mb-1 block">Harga 1 Pak</label>
+                            <input :value="displayPack" @input="updateNumber('pack_price', $event)" type="text" inputmode="numeric" class="form-control !bg-white font-bold" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="text-[9px] font-black text-gray-400 uppercase mb-1 block">Isi Per Pak</label>
+                            <input v-model.number="product.pack_size" @input="updatePackSize" @focus="clearInitialSize" type="number" class="form-control !bg-white font-bold" placeholder="1">
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label class="text-[10px] font-black text-green-500 uppercase tracking-widest mb-1 block">Harga Jual</label>
-                    <input :value="displaySell" @input="updateNumber('price_sell', $event)" type="text" inputmode="numeric" class="form-control font-bold text-green-600 bg-green-50/20" placeholder="0">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="form-group">
+                        <label class="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1 block">Harga Modal (/pcs)</label>
+                        <input :value="displayModal" @input="updateNumber('price_modal', $event)" type="text" inputmode="numeric" class="form-control font-bold text-red-600 bg-red-50/20" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="text-[10px] font-black text-green-500 uppercase tracking-widest mb-1 block">Harga Jual (/pcs)</label>
+                        <input :value="displaySell" @input="updateNumber('price_sell', $event)" type="text" inputmode="numeric" class="form-control font-bold text-green-600 bg-green-50/20" placeholder="0">
+                    </div>
                 </div>
 
                 <div class="form-group">
