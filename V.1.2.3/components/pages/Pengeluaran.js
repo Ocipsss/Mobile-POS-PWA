@@ -74,59 +74,59 @@ const PagePengeluaran = {
             <h3 class="text-xl font-black text-gray-800 uppercase tracking-tighter m-0">Catat Pengeluaran</h3>
         </div>
 
-        <div class="bg-blue-600 p-7 rounded-[2rem] shadow-xl shadow-gray-200 relative overflow-hidden">
+        <div class="bg-white p-7 rounded-[1rem] shadow-xl shadow-gray-200/50 border border-gray-100 relative overflow-hidden">
             <div class="relative z-10 flex flex-col gap-4">
                 
                 <div class="grid grid-cols-2 gap-3">
                     <div class="flex flex-col gap-1">
-                        <label class="text-[8px] font-black uppercase text-gray-500 tracking-widest ml-1">Kategori</label>
+                        <label class="text-[8px] font-black uppercase text-gray-400 tracking-widest ml-1">Kategori</label>
                         <input v-model="form.category" type="text" placeholder="Listrik..." 
-                            class="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-white outline-none focus:border-red-500 transition-all">
+                            class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold text-gray-800 outline-none focus:border-blue-500 transition-all">
                     </div>
                     <div class="flex flex-col gap-1">
-                        <label class="text-[8px] font-black uppercase text-gray-500 tracking-widest ml-1">Nominal (Rp)</label>
+                        <label class="text-[8px] font-black uppercase text-gray-400 tracking-widest ml-1">Nominal (Rp)</label>
                         <input v-model="form.amount" type="number" placeholder="0" 
-                            class="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-white outline-none focus:border-red-500 transition-all">
+                            class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold text-gray-800 outline-none focus:border-blue-500 transition-all">
                     </div>
                 </div>
 
                 <div class="flex flex-col gap-2">
-                    <label class="text-[8px] font-black uppercase text-gray-500 tracking-widest ml-1">Metode Pembayaran</label>
+                    <label class="text-[8px] font-black uppercase text-gray-400 tracking-widest ml-1">Metode Pembayaran</label>
                     <div class="flex flex-row gap-2">
                         <button @click="form.paymentMethod = 'cash'" 
-                            :class="form.paymentMethod === 'cash' ? 'bg-red-500 text-white' : 'bg-white/5 text-gray-400'" 
-                            class="flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all border border-white/5">CASH</button>
+                            :class="form.paymentMethod === 'cash' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-400'" 
+                            class="flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all border border-gray-100">CASH</button>
                         <button @click="form.paymentMethod = 'qris'" 
-                            :class="form.paymentMethod === 'qris' ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-400'" 
-                            class="flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all border border-white/5">QRIS</button>
+                            :class="form.paymentMethod === 'qris' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-400'" 
+                            class="flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all border border-gray-100">QRIS</button>
                         <button @click="form.paymentMethod = 'split'" 
-                            :class="form.paymentMethod === 'split' ? 'bg-orange-500 text-white' : 'bg-white/5 text-gray-400'" 
-                            class="flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all border border-white/5">SPLIT</button>
+                            :class="form.paymentMethod === 'split' ? 'bg-orange-500 text-white' : 'bg-gray-50 text-gray-400'" 
+                            class="flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all border border-gray-100">SPLIT</button>
                     </div>
                 </div>
 
                 <div v-if="form.paymentMethod === 'split'" class="grid grid-cols-2 gap-2 animate-slide-up">
-                    <div class="bg-white/5 p-3 rounded-xl border border-white/10">
-                        <label class="text-[7px] font-black text-gray-500 uppercase">Porsi Cash</label>
-                        <input v-model="form.cashAmount" type="number" class="w-full bg-transparent border-none p-0 text-[11px] font-black text-white outline-none" placeholder="0">
+                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                        <label class="text-[7px] font-black text-blue-500 uppercase">Porsi Cash</label>
+                        <input v-model="form.cashAmount" type="number" class="w-full bg-transparent border-none p-0 text-[11px] font-black text-gray-800 outline-none" placeholder="0">
                     </div>
-                    <div class="bg-white/5 p-3 rounded-xl border border-white/10">
-                        <label class="text-[7px] font-black text-gray-500 uppercase">Porsi QRIS</label>
-                        <input v-model="form.qrisAmount" type="number" class="w-full bg-transparent border-none p-0 text-[11px] font-black text-white outline-none" placeholder="0">
+                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                        <label class="text-[7px] font-black text-blue-500 uppercase">Porsi QRIS</label>
+                        <input v-model="form.qrisAmount" type="number" class="w-full bg-transparent border-none p-0 text-[11px] font-black text-gray-800 outline-none" placeholder="0">
                     </div>
                 </div>
 
                 <div class="flex flex-col gap-1">
-                    <label class="text-[8px] font-black uppercase text-gray-500 tracking-widest ml-1">Keterangan</label>
+                    <label class="text-[8px] font-black uppercase text-gray-400 tracking-widest ml-1">Keterangan</label>
                     <textarea v-model="form.note" placeholder="Tulis catatan..." 
-                        class="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-white outline-none h-16 resize-none focus:border-red-500 transition-all"></textarea>
+                        class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold text-gray-800 h-16 resize-none focus:border-blue-500 transition-all"></textarea>
                 </div>
 
-                <button @click="tambahPengeluaran" class="w-full py-4 bg-white text-gray-900 rounded-2xl font-black text-[11px] uppercase shadow-xl active:scale-95 transition-all mt-2">
+                <button @click="tambahPengeluaran" class="w-full py-4 bg-gray-900 text-white rounded-2xl font-black text-[11px] uppercase shadow-xl active:scale-95 transition-all mt-2">
                     Simpan Data
                 </button>
             </div>
-            <i class="ri-hand-coin-line absolute -right-6 -bottom-6 text-[100px] text-white/5 rotate-12 pointer-events-none"></i>
+            <i class="ri-hand-coin-line absolute -right-6 -bottom-6 text-[100px] text-gray-100 rotate-12 pointer-events-none"></i>
         </div>
 
         <div class="flex flex-col gap-3 px-1">
