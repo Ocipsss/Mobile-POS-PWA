@@ -1,14 +1,14 @@
+// components/pages/Pengeluaran.js //
 const PagePengeluaran = {
     setup() {
         const expenses = Vue.ref([]);
         const isLoading = Vue.ref(false);
         
-        // Form dengan dukungan Split Payment
         const form = Vue.ref({ 
             category: '', 
             amount: null, 
             note: '',
-            paymentMethod: 'cash', // cash, qris, split
+            paymentMethod: 'cash', 
             cashAmount: 0,
             qrisAmount: 0
         });
@@ -34,7 +34,6 @@ const PagePengeluaran = {
                 return alert("Kategori, Nominal, dan Keterangan wajib diisi!");
             }
 
-            // Validasi Split Payment
             if (form.value.paymentMethod === 'split') {
                 if ((Number(form.value.cashAmount) + Number(form.value.qrisAmount)) !== total) {
                     return alert("Jumlah Cash + QRIS harus sama dengan Total Pengeluaran!");
@@ -53,87 +52,115 @@ const PagePengeluaran = {
             };
 
             try {
-                const id = await db.expenses.add(newExp);
-                alert("Pengeluaran berhasil dicatat!");
-                
-                // Reset Form
+                await db.expenses.add(newExp);
                 form.value = { category: '', amount: null, note: '', paymentMethod: 'cash', cashAmount: 0, qrisAmount: 0 };
                 loadExpenses();
+                alert("Berhasil dicatat!");
             } catch (err) {
                 alert("Gagal: " + err.message);
             }
         };
 
-        const formatRupiah = (val) => "Rp " + (val || 0).toLocaleString('id-ID');
-
+        const formatR = (val) => "Rp " + (val || 0).toLocaleString('id-ID');
         Vue.onMounted(loadExpenses);
 
-        return { expenses, form, tambahPengeluaran, formatRupiah, isLoading };
+        return { expenses, form, tambahPengeluaran, formatR, isLoading };
     },
     template: `
-    <div class="p-4 flex flex-col gap-6 pb-24">
-        <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
-            <h3 class="text-lg font-black text-gray-800 uppercase mb-4 tracking-tight">Catat Pengeluaran</h3>
-            
-            <div class="flex flex-col gap-4">
-                <div>
-                    <label class="text-[10px] font-black uppercase text-gray-400 ml-2">Kategori (Ketik Bebas)</label>
-                    <input v-model="form.category" type="text" placeholder="Contoh: Listrik, Gaji, Sembako..." class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold outline-none">
-                </div>
+    <div class="w-full flex flex-col gap-5 py-2 animate-zoom-in no-scrollbar px-1 pb-28">
+        
+        <div class="flex flex-col px-3 mt-2">
+            <span class="text-[9px] font-black text-red-500 uppercase tracking-[0.3em]">Operational</span>
+            <h3 class="text-xl font-black text-gray-800 uppercase tracking-tighter m-0">Catat Pengeluaran</h3>
+        </div>
 
-                <div>
-                    <label class="text-[10px] font-black uppercase text-gray-400 ml-2">Total Nominal (Rp)</label>
-                    <input v-model="form.amount" type="number" placeholder="0" class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold outline-none">
-                </div>
-
-                <div>
-                    <label class="text-[10px] font-black uppercase text-gray-400 ml-2">Metode Bayar</label>
-                    <div class="grid grid-cols-3 gap-2 mt-1">
-                        <button @click="form.paymentMethod = 'cash'" :class="form.paymentMethod === 'cash' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-400'" class="py-3 rounded-xl text-[10px] font-black uppercase transition-all">CASH</button>
-                        <button @click="form.paymentMethod = 'qris'" :class="form.paymentMethod === 'qris' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-400'" class="py-3 rounded-xl text-[10px] font-black uppercase transition-all">QRIS</button>
-                        <button @click="form.paymentMethod = 'split'" :class="form.paymentMethod === 'split' ? 'bg-orange-500 text-white' : 'bg-gray-50 text-gray-400'" class="py-3 rounded-xl text-[10px] font-black uppercase transition-all">SPLIT</button>
+        <div class="bg-blue-600 p-7 rounded-[2rem] shadow-xl shadow-gray-200 relative overflow-hidden">
+            <div class="relative z-10 flex flex-col gap-4">
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[8px] font-black uppercase text-gray-500 tracking-widest ml-1">Kategori</label>
+                        <input v-model="form.category" type="text" placeholder="Listrik..." 
+                            class="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-white outline-none focus:border-red-500 transition-all">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[8px] font-black uppercase text-gray-500 tracking-widest ml-1">Nominal (Rp)</label>
+                        <input v-model="form.amount" type="number" placeholder="0" 
+                            class="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-white outline-none focus:border-red-500 transition-all">
                     </div>
                 </div>
 
-                <div v-if="form.paymentMethod === 'split'" class="grid grid-cols-2 gap-2 animate-zoom-in">
-                    <div class="bg-orange-50 p-3 rounded-2xl">
-                        <label class="text-[9px] font-black text-orange-400 uppercase">Porsi Cash</label>
-                        <input v-model="form.cashAmount" type="number" class="w-full bg-transparent border-none p-0 text-sm font-black outline-none" placeholder="0">
-                    </div>
-                    <div class="bg-blue-50 p-3 rounded-2xl">
-                        <label class="text-[9px] font-black text-blue-400 uppercase">Porsi QRIS</label>
-                        <input v-model="form.qrisAmount" type="number" class="w-full bg-transparent border-none p-0 text-sm font-black outline-none" placeholder="0">
+                <div class="flex flex-col gap-2">
+                    <label class="text-[8px] font-black uppercase text-gray-500 tracking-widest ml-1">Metode Pembayaran</label>
+                    <div class="flex flex-row gap-2">
+                        <button @click="form.paymentMethod = 'cash'" 
+                            :class="form.paymentMethod === 'cash' ? 'bg-red-500 text-white' : 'bg-white/5 text-gray-400'" 
+                            class="flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all border border-white/5">CASH</button>
+                        <button @click="form.paymentMethod = 'qris'" 
+                            :class="form.paymentMethod === 'qris' ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-400'" 
+                            class="flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all border border-white/5">QRIS</button>
+                        <button @click="form.paymentMethod = 'split'" 
+                            :class="form.paymentMethod === 'split' ? 'bg-orange-500 text-white' : 'bg-white/5 text-gray-400'" 
+                            class="flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all border border-white/5">SPLIT</button>
                     </div>
                 </div>
 
-                <div>
-                    <label class="text-[10px] font-black uppercase text-gray-400 ml-2">Keterangan</label>
-                    <textarea v-model="form.note" placeholder="Beli apa..." class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold outline-none h-20"></textarea>
+                <div v-if="form.paymentMethod === 'split'" class="grid grid-cols-2 gap-2 animate-slide-up">
+                    <div class="bg-white/5 p-3 rounded-xl border border-white/10">
+                        <label class="text-[7px] font-black text-gray-500 uppercase">Porsi Cash</label>
+                        <input v-model="form.cashAmount" type="number" class="w-full bg-transparent border-none p-0 text-[11px] font-black text-white outline-none" placeholder="0">
+                    </div>
+                    <div class="bg-white/5 p-3 rounded-xl border border-white/10">
+                        <label class="text-[7px] font-black text-gray-500 uppercase">Porsi QRIS</label>
+                        <input v-model="form.qrisAmount" type="number" class="w-full bg-transparent border-none p-0 text-[11px] font-black text-white outline-none" placeholder="0">
+                    </div>
                 </div>
 
-                <button @click="tambahPengeluaran" class="w-full py-4 bg-red-500 text-white rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-all">
-                    Simpan Pengeluaran
+                <div class="flex flex-col gap-1">
+                    <label class="text-[8px] font-black uppercase text-gray-500 tracking-widest ml-1">Keterangan</label>
+                    <textarea v-model="form.note" placeholder="Tulis catatan..." 
+                        class="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-white outline-none h-16 resize-none focus:border-red-500 transition-all"></textarea>
+                </div>
+
+                <button @click="tambahPengeluaran" class="w-full py-4 bg-white text-gray-900 rounded-2xl font-black text-[11px] uppercase shadow-xl active:scale-95 transition-all mt-2">
+                    Simpan Data
                 </button>
             </div>
+            <i class="ri-hand-coin-line absolute -right-6 -bottom-6 text-[100px] text-white/5 rotate-12 pointer-events-none"></i>
         </div>
 
-        <div class="flex flex-col gap-3">
-            <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2">Riwayat Pengeluaran</h4>
-            <div v-for="ex in expenses" :key="ex.id" class="bg-white p-4 rounded-2xl flex items-center justify-between border border-gray-100 shadow-sm">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center">
-                        <i :class="ex.paymentMethod === 'split' ? 'ri-shuffle-line' : (ex.paymentMethod === 'qris' ? 'ri-qr-code-line' : 'ri-money-dollar-circle-line')"></i>
+        <div class="flex flex-col gap-3 px-1">
+            <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2 flex items-center gap-2">
+                <i class="ri-history-line"></i> Riwayat Hari Ini
+            </h4>
+            
+            <div class="flex flex-col gap-2">
+                <div v-for="ex in expenses" :key="ex.id" 
+                    class="bg-white p-4 rounded-2xl flex items-center justify-between border border-gray-100 shadow-sm animate-slide-up active:scale-95 transition-all">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center text-lg shadow-inner">
+                            <i :class="ex.paymentMethod === 'split' ? 'ri-shuffle-line' : (ex.paymentMethod === 'qris' ? 'ri-qr-code-line' : 'ri-money-dollar-circle-line')"></i>
+                        </div>
+                        <div>
+                            <div class="text-[11px] font-black text-gray-800 uppercase leading-none mb-1">{{ ex.note }}</div>
+                            <div class="text-[8px] text-gray-400 font-bold uppercase tracking-tight">
+                                {{ ex.category }} • {{ ex.paymentMethod }}
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <div class="text-[11px] font-black text-gray-800 uppercase leading-none mb-1">{{ ex.note }}</div>
-                        <div class="text-[9px] text-gray-400 font-bold uppercase">{{ ex.category }} • {{ ex.paymentMethod }}</div>
+                    <div class="text-right">
+                        <div class="text-[12px] font-black text-red-600 leading-none">{{ formatR(ex.amount) }}</div>
+                        <div class="text-[7px] font-bold text-gray-300 uppercase mt-1">Selesai</div>
                     </div>
                 </div>
-                <div class="text-right">
-                    <div class="text-sm font-black text-red-600">- {{ formatRupiah(ex.amount) }}</div>
+
+                <div v-if="expenses.length === 0" class="py-10 text-center opacity-20">
+                    <i class="ri-refund-2-line text-4xl mb-1"></i>
+                    <p class="text-[9px] font-black uppercase">Belum ada data</p>
                 </div>
             </div>
         </div>
+
     </div>
     `
 };
