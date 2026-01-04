@@ -1,13 +1,14 @@
 // js/database.js //
 const db = new Dexie("SinarPagiDB");
 
-// Versi 13: Update skema expenses untuk mendukung rincian cashPart & qrisPart
-db.version(13).stores({
+// Versi 15: Menambahkan tabel digital_transactions untuk fitur TopUp & Tarik Tunai
+db.version(15).stores({
     products: '++id, name, code, category, price_modal, price_sell, qty, unit',
     categories: '++id, name',
     transactions: '++id, date, total, memberId, paymentMethod, amountPaid, change, status',
     members: 'id, name, phone, address, total_spending, points', 
     expenses: '++id, date, category, amount, note, paymentMethod, cashPart, qrisPart',
+    digital_transactions: '++id, date, type, provider, nominal, adminFee, adminPaymentMethod, totalReceived, profit',
     settings: 'id, storeName'
 });
 
@@ -32,7 +33,8 @@ const syncToCloud = (table, id, data) => {
 window.forceUploadAll = async () => {
     if (!confirm("Apakah Anda yakin ingin mengunggah SEMUA data lokal ke Firebase? Data yang sudah ada di Cloud akan diperbarui.")) return;
     
-    const tables = ['products', 'categories', 'transactions', 'members', 'expenses'];
+    // Menambahkan digital_transactions ke daftar upload massal
+    const tables = ['products', 'categories', 'transactions', 'members', 'expenses', 'digital_transactions'];
     console.log("Memulai sinkronisasi massal...");
     
     try {
@@ -56,14 +58,15 @@ const setupHooks = (tableName) => {
     db[tableName].hook('deleting', (pk) => { syncToCloud(tableName, pk, null); });
 };
 
-// Daftarkan semua tabel ke hooks
-['products', 'categories', 'transactions', 'members', 'expenses'].forEach(setupHooks);
+// Daftarkan semua tabel ke hooks (Termasuk tabel baru)
+['products', 'categories', 'transactions', 'members', 'expenses', 'digital_transactions'].forEach(setupHooks);
 
 // --- FUNGSI SINKRONISASI MASUK (CLOUD -> LOCAL) ---
 const syncFromCloud = () => {
     if (typeof fdb === 'undefined') return;
 
-    const tables = ['products', 'categories', 'transactions', 'members', 'expenses'];
+    // Menambahkan digital_transactions ke daftar pantauan Cloud
+    const tables = ['products', 'categories', 'transactions', 'members', 'expenses', 'digital_transactions'];
     tables.forEach(tableName => {
         const ref = fdb.ref(tableName);
         
@@ -86,14 +89,21 @@ const syncFromCloud = () => {
 };
 
 // --- HELPER LABA RUGI ---
+// Ditambahkan logika untuk menghitung laba dari layanan digital (Admin Fee)
 window.hitungLabaRugi = async (startDate, endDate) => {
     try {
         const semuaTransaksi = await db.transactions
             .where('date').between(startDate, endDate, true, true)
             .toArray();
 
-        let stats = { totalOmzet: 0, totalModal: 0, totalLabaBersih: 0, count: semuaTransaksi.length };
+        // Ambil data transaksi digital untuk laba tambahan
+        const digitalTrans = await db.digital_transactions
+            .where('date').between(startDate, endDate, true, true)
+            .toArray();
 
+        let stats = { totalOmzet: 0, totalModal: 0, totalLabaBersih: 0, count: semuaTransaksi.length + digitalTrans.length };
+
+        // Hitung dari Penjualan Produk
         semuaTransaksi.forEach(tr => {
             stats.totalOmzet += Number(tr.total || 0);
             if (tr.items && Array.isArray(tr.items)) {
@@ -109,6 +119,14 @@ window.hitungLabaRugi = async (startDate, endDate) => {
                 });
             }
         });
+
+        // Tambahkan Laba dari Biaya Admin Layanan Digital
+        digitalTrans.forEach(dt => {
+            stats.totalLabaBersih += Number(dt.profit || 0);
+            // Omzet digital biasanya dihitung dari admin fee-nya saja karena nominal adalah uang titipan
+            stats.totalOmzet += Number(dt.adminFee || 0); 
+        });
+
         return stats;
     } catch (err) {
         console.error("Gagal hitung laba:", err);
@@ -118,7 +136,7 @@ window.hitungLabaRugi = async (startDate, endDate) => {
 
 // --- EKSEKUSI ---
 db.open().then(() => {
-    console.log("Database SinarPagiDB v13 Aktif (Ready for Global Sync)");
+    console.log("Database SinarPagiDB v15 Aktif (Digital Service Ready)");
     syncFromCloud(); 
 }).catch(err => {
     console.error("Koneksi Database Gagal:", err);

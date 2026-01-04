@@ -1,147 +1,104 @@
 // components/pages/LaporanLabaRugi.js //
 
 window.PageLabaRugi = {
-    template: `
-        <div class="p-6 space-y-7 pb-24 bg-white min-h-full">
-            
-            <div v-if="isLoading" class="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
-                <div class="flex flex-col items-center">
-                    <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-4">Syncing Cloud...</p>
-                </div>
-            </div>
-
-            <div class="flex items-center bg-slate-50 rounded-2xl p-1.5 border border-slate-100">
-                <div class="flex-1">
-                    <input type="date" v-model="filter.start" @change="loadData" 
-                        class="w-full bg-transparent border-none text-[10px] font-black text-slate-500 focus:ring-0 py-2 px-3 uppercase tracking-tighter text-center">
-                </div>
-                <div class="w-[1px] h-4 bg-slate-200"></div>
-                <div class="flex-1">
-                    <input type="date" v-model="filter.end" @change="loadData" 
-                        class="w-full bg-transparent border-none text-[10px] font-black text-slate-500 focus:ring-0 py-2 px-3 uppercase tracking-tighter text-center">
-                </div>
-            </div>
-
-            <div class="py-4">
-                <p class="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] mb-3 text-center">Net Profit</p>
-                <div class="text-center">
-                    <h3 class="text-5xl font-black text-slate-800 tracking-tighter inline-block">
-                        <span class="text-blue-500 text-lg align-top mr-1 font-bold">Rp</span>{{ stats.totalLabaBersih.toLocaleString('id-ID') }}
-                    </h3>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <div class="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
-                    <div class="flex items-center gap-2 mb-2">
-                        <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Revenue</span>
-                    </div>
-                    <p class="text-sm font-black text-slate-700">Rp {{ stats.totalOmzet.toLocaleString('id-ID') }}</p>
-                </div>
-
-                <div class="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
-                    <div class="flex items-center gap-2 mb-2">
-                        <div class="w-1.5 h-1.5 rounded-full bg-orange-400"></div>
-                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Expenses</span>
-                    </div>
-                    <p class="text-sm font-black text-slate-700">Rp {{ stats.totalModal.toLocaleString('id-ID') }}</p>
-                </div>
-            </div>
-
-            <div class="bg-blue-50/50 rounded-[2rem] p-6 border border-blue-100/50 flex justify-between items-center">
-                <div>
-                    <p class="text-[8px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1 text-left">Margin Profit</p>
-                    <p class="text-xl font-black text-blue-600 tracking-tight">{{ calculateMargin() }}%</p>
-                </div>
-                <div class="text-right">
-                    <p class="text-[8px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">Avg per Sale</p>
-                    <p class="text-xs font-black text-slate-600">Rp {{ calculateAvg().toLocaleString('id-ID') }}</p>
-                </div>
-            </div>
-
-            <div class="flex justify-center items-center gap-2 pt-2">
-                <div class="h-[1px] w-8 bg-slate-100"></div>
-                <p class="text-[9px] font-black text-slate-300 uppercase tracking-widest">{{ stats.count }} Transactions</p>
-                <div class="h-[1px] w-8 bg-slate-100"></div>
-            </div>
-
-            <div v-if="stats.count === 0 && !isLoading" class="py-10 text-center text-slate-200">
-                <i class="ri-bar-chart-2-line text-4xl opacity-20"></i>
-                <p class="text-[8px] font-black uppercase mt-2">No Data Found</p>
-            </div>
-        </div>
-    `,
     setup() {
         const stats = Vue.ref({ totalOmzet: 0, totalModal: 0, totalLabaBersih: 0, count: 0 });
         const isLoading = Vue.ref(false);
-        const now = new Date();
         const filter = Vue.ref({
-            start: new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0],
-            end: new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().split('T')[0]
+            start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+            end: new Date().toISOString().split('T')[0]
         });
 
         const loadData = async () => {
             isLoading.value = true;
-            const startStr = filter.value.start + "T00:00:00.000Z";
-            const endStr = filter.value.end + "T23:59:59.999Z";
-
             try {
-                // SINKRONISASI CLOUD (FIREBASE)
-                if (typeof fdb !== 'undefined') {
-                    const snapshot = await fdb.ref('transactions')
-                        .orderByChild('date')
-                        .startAt(startStr)
-                        .endAt(endStr)
-                        .once('value');
-                    
-                    const data = snapshot.val();
-                    let omzet = 0;
-                    let modal = 0;
-                    let count = 0;
+                // Ambil data langsung dari Dexie (Lokal) agar pasti sinkron dengan input terakhir
+                const start = filter.value.start;
+                const end = filter.value.end + "T23:59:59";
+                
+                const allTrans = await db.transactions
+                    .where('date')
+                    .between(start, end, true, true)
+                    .toArray();
 
-                    if (data) {
-                        Object.values(data).forEach(trx => {
-                            omzet += (trx.total || 0);
-                            count++;
-                            if (trx.items) {
-                                trx.items.forEach(item => {
-                                    const hModal = item.price_modal || item.price_sell || 0;
-                                    modal += (hModal * item.qty);
-                                });
-                            }
-                        });
-                    }
+                let omzet = 0;
+                let modal = 0;
+                allTrans.forEach(t => {
+                    omzet += Number(t.total || 0);
+                    (t.items || []).forEach(i => {
+                        modal += (Number(i.price_modal || i.price_sell || 0) * Number(i.qty || 0));
+                    });
+                });
 
-                    stats.value = {
-                        totalOmzet: omzet,
-                        totalModal: modal,
-                        totalLabaBersih: omzet - modal,
-                        count: count
-                    };
-                } else if (window.hitungLabaRugi) {
-                    // Fallback jika Firebase tidak tersedia
-                    stats.value = await window.hitungLabaRugi(startStr, endStr);
-                }
-            } catch (err) {
-                console.error("Laporan Error:", err);
+                const allExp = await db.expenses
+                    .where('date')
+                    .between(start, end, true, true)
+                    .toArray();
+                const totalExp = allExp.reduce((s, e) => s + Number(e.amount || 0), 0);
+
+                stats.value = {
+                    totalOmzet: omzet,
+                    totalModal: modal + totalExp,
+                    totalLabaBersih: omzet - (modal + totalExp),
+                    count: allTrans.length
+                };
+            } catch (e) {
+                console.error(e);
             } finally {
                 isLoading.value = false;
             }
         };
 
-        const calculateMargin = () => {
-            if (stats.value.totalOmzet === 0) return 0;
-            return ((stats.value.totalLabaBersih / stats.value.totalOmzet) * 100).toFixed(1);
-        };
-
-        const calculateAvg = () => {
-            if (stats.value.count === 0) return 0;
-            return Math.round(stats.value.totalLabaBersih / stats.value.count);
-        };
-
+        const formatR = (v) => "Rp " + (v || 0).toLocaleString('id-ID');
         Vue.onMounted(loadData);
-        return { stats, filter, loadData, calculateMargin, calculateAvg, isLoading };
-    }
+
+        return { stats, filter, loadData, formatR, isLoading };
+    },
+    template: `
+    <div class="p-4 flex flex-col gap-5 bg-white min-h-full">
+        
+        <div class="grid grid-cols-2 gap-2">
+            <div class="bg-gray-100 p-2 rounded-xl">
+                <label class="text-[8px] font-bold text-gray-500 uppercase block ml-1">Mulai</label>
+                <input type="date" v-model="filter.start" @change="loadData" class="w-full bg-transparent border-none text-xs font-bold focus:ring-0">
+            </div>
+            <div class="bg-gray-100 p-2 rounded-xl">
+                <label class="text-[8px] font-bold text-gray-500 uppercase block ml-1">Selesai</label>
+                <input type="date" v-model="filter.end" @change="loadData" class="w-full bg-transparent border-none text-xs font-bold focus:ring-0">
+            </div>
+        </div>
+
+        <div class="py-6 border-b border-gray-100 text-center">
+            <span class="text-[10px] font-black text-blue-500 uppercase tracking-widest block mb-2">Net Profit</span>
+            <h2 class="text-4xl font-black text-gray-800 tracking-tighter">
+                {{ formatR(stats.totalLabaBersih) }}
+            </h2>
+            <div class="inline-block mt-4 px-4 py-1 bg-gray-900 text-white text-[9px] font-bold rounded-full uppercase tracking-tighter">
+                {{ stats.count }} Transaksi Sukses
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3">
+            <div class="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <div class="flex items-center gap-3">
+                    <i class="ri-arrow-up-circle-fill text-green-500 text-2xl"></i>
+                    <span class="text-[10px] font-bold text-gray-500 uppercase">Revenue / Omzet</span>
+                </div>
+                <span class="font-black text-gray-800">{{ formatR(stats.totalOmzet) }}</span>
+            </div>
+
+            <div class="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <div class="flex items-center gap-3">
+                    <i class="ri-arrow-down-circle-fill text-red-500 text-2xl"></i>
+                    <span class="text-[10px] font-bold text-gray-500 uppercase">Total Modal & Biaya</span>
+                </div>
+                <span class="font-black text-gray-800">{{ formatR(stats.totalModal) }}</span>
+            </div>
+        </div>
+
+        <div class="mt-auto pt-10 text-center opacity-30">
+            <p class="text-[9px] font-bold uppercase tracking-widest">Sinar Pagi - Laporan Keuangan</p>
+        </div>
+    </div>
+    `
 };

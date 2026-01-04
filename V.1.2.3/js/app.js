@@ -18,7 +18,8 @@ const app = createApp({
         'page-dashboard': PageDashboard,
         'page-laba-rugi': window.PageLabaRugi, 
         'page-pengeluaran': PagePengeluaran,
-        'page-arus-uang': typeof PageArusUang !== 'undefined' ? PageArusUang : PlaceholderComponent, // TAMBAHAN: Komponen Arus Uang
+        'page-arus-uang': typeof PageArusUang !== 'undefined' ? PageArusUang : PlaceholderComponent,
+        'page-digital-svc': typeof PageDigitalSvc !== 'undefined' ? PageDigitalSvc : PlaceholderComponent, // TAMBAHAN BARU
         'struk-nota': StrukNota, 
     },
     
@@ -162,23 +163,18 @@ const app = createApp({
                     kasir: 'Admin'
                 };
 
-                // 1. Simpan ke Lokal
                 const id = await db.transactions.add(transData);
                 lastTransaction.value = { id, ...transData };
 
-                // 2. Simpan ke Cloud (Firebase)
                 if (typeof fdb !== 'undefined' && isCloudOnline.value) {
                     await fdb.ref('transactions/' + id).set({ id, ...transData });
                 }
 
-                // 3. Update Stok (Lokal & Cloud)
                 for (const item of cart.value) {
                     const p = await db.products.get(item.id);
                     if (p) {
                         const newQty = p.qty - item.qty;
-                        // Update Lokal
                         await db.products.update(item.id, { qty: newQty });
-                        // Update Cloud
                         if (typeof fdb !== 'undefined' && isCloudOnline.value) {
                             await fdb.ref('products/' + item.id).update({ qty: newQty });
                         }
@@ -219,7 +215,8 @@ const app = createApp({
                 'Piutang Penjualan': 'page-piutang-penjualan', 'Dashboard': 'page-dashboard', 
                 'Laba Rugi': 'page-laba-rugi',
                 'Pengeluaran': 'page-pengeluaran',
-                'Arus Uang': 'page-arus-uang' // TAMBAHAN: Mapping untuk menu Arus Uang
+                'Arus Uang': 'page-arus-uang',
+                'Layanan Digital': 'page-digital-svc' // TAMBAHAN BARU
             };
             return map[pageName] || 'page-placeholder';
         };
