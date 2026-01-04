@@ -18,8 +18,9 @@ const app = createApp({
         'page-dashboard': PageDashboard,
         'page-laba-rugi': window.PageLabaRugi, 
         'page-pengeluaran': PagePengeluaran,
+        'page-transaksi': PageTransaksi, // TAMBAHAN: Komponen Riwayat Transaksi
         'page-arus-uang': typeof PageArusUang !== 'undefined' ? PageArusUang : PlaceholderComponent,
-        'page-digital-svc': typeof PageDigitalSvc !== 'undefined' ? PageDigitalSvc : PlaceholderComponent, // TAMBAHAN BARU
+        'page-digital-svc': typeof PageDigitalSvc !== 'undefined' ? PageDigitalSvc : PlaceholderComponent,
         'struk-nota': StrukNota, 
     },
     
@@ -208,15 +209,21 @@ const app = createApp({
         
         const getComponent = (pageName) => {
             const map = {
-                'Penjualan': 'page-penjualan', 'Tambah Produk': 'page-tambah-produk',
-                'Kategori Produk': 'page-kategori', 'Daftar Produk': 'page-daftar-produk',
-                'Data Member': 'page-data-member', 'Pengaturan': 'page-pengaturan',
-                'Laporan Harian': 'page-laporan-harian', 'Stock Monitor': 'page-stock-monitor',
-                'Piutang Penjualan': 'page-piutang-penjualan', 'Dashboard': 'page-dashboard', 
+                'Penjualan': 'page-penjualan', 
+                'Tambah Produk': 'page-tambah-produk',
+                'Kategori Produk': 'page-kategori', 
+                'Daftar Produk': 'page-daftar-produk',
+                'Data Member': 'page-data-member', 
+                'Pengaturan': 'page-pengaturan',
+                'Laporan Harian': 'page-laporan-harian', 
+                'Stock Monitor': 'page-stock-monitor',
+                'Piutang Penjualan': 'page-piutang-penjualan', 
+                'Dashboard': 'page-dashboard', 
                 'Laba Rugi': 'page-laba-rugi',
                 'Pengeluaran': 'page-pengeluaran',
+                'Riwayat Transaksi': 'page-transaksi', // TAMBAHAN: Map ke komponen riwayat
                 'Arus Uang': 'page-arus-uang',
-                'Layanan Digital': 'page-digital-svc' // TAMBAHAN BARU
+                'Layanan Digital': 'page-digital-svc' 
             };
             return map[pageName] || 'page-placeholder';
         };

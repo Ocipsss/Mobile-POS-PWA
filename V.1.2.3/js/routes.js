@@ -4,14 +4,15 @@ window.menuGroups = [
         title: 'Beranda', 
         items: [
             { name: 'Dashboard', icon: 'ri-dashboard-3-line' },
-            { name: 'Penjualan', icon: 'ri-calculator-line' }
+            { name: 'Penjualan', icon: 'ri-calculator-line' },
+            { name: 'Riwayat Transaksi', icon: 'ri-history-line' } // TAMBAHAN: Untuk akses edit & pantau nota
         ]
     },
     { 
         title: 'Operasional', 
         items: [
             { name: 'Stock Monitor', icon: 'ri-radar-line' },
-            { name: 'Layanan Digital', icon: 'ri-smartphone-line' }, // TAMBAHAN BARU
+            { name: 'Layanan Digital', icon: 'ri-smartphone-line' },
             { name: 'Piutang Penjualan', icon: 'ri-hand-coin-line' },
             { name: 'Pengeluaran', icon: 'ri-shopping-basket-line' } 
         ]
