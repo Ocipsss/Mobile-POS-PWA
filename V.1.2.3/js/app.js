@@ -17,6 +17,8 @@ const app = createApp({
         'page-piutang-penjualan': PagePiutangPenjualan,
         'page-dashboard': PageDashboard,
         'page-laba-rugi': window.PageLabaRugi, 
+        'page-pengeluaran': PagePengeluaran,
+        'page-arus-uang': typeof PageArusUang !== 'undefined' ? PageArusUang : PlaceholderComponent, // TAMBAHAN: Komponen Arus Uang
         'struk-nota': StrukNota, 
     },
     
@@ -214,7 +216,10 @@ const app = createApp({
                 'Kategori Produk': 'page-kategori', 'Daftar Produk': 'page-daftar-produk',
                 'Data Member': 'page-data-member', 'Pengaturan': 'page-pengaturan',
                 'Laporan Harian': 'page-laporan-harian', 'Stock Monitor': 'page-stock-monitor',
-                'Piutang Penjualan': 'page-piutang-penjualan', 'Dashboard': 'page-dashboard', 'Laba Rugi': 'page-laba-rugi'
+                'Piutang Penjualan': 'page-piutang-penjualan', 'Dashboard': 'page-dashboard', 
+                'Laba Rugi': 'page-laba-rugi',
+                'Pengeluaran': 'page-pengeluaran',
+                'Arus Uang': 'page-arus-uang' // TAMBAHAN: Mapping untuk menu Arus Uang
             };
             return map[pageName] || 'page-placeholder';
         };

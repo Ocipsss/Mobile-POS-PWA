@@ -1,3 +1,4 @@
+// js/routes.js //
 window.menuGroups = [
     { 
         title: 'Beranda', 
@@ -10,7 +11,9 @@ window.menuGroups = [
         title: 'Operasional', 
         items: [
             { name: 'Stock Monitor', icon: 'ri-radar-line' },
-            { name: 'Piutang Penjualan', icon: 'ri-hand-coin-line' }
+            { name: 'Piutang Penjualan', icon: 'ri-hand-coin-line' },
+            // TAMBAHAN: Menu untuk menginput pengeluaran (biaya)
+            { name: 'Pengeluaran', icon: 'ri-shopping-basket-line' } 
         ]
     },
     { 
@@ -28,6 +31,8 @@ window.menuGroups = [
         items: [
             { name: 'Laporan Harian', icon: 'ri-calendar-event-line' },
             { name: 'Laba Rugi', icon: 'ri-funds-line' },
+            // TAMBAHAN: Laporan untuk melihat cashflow (Masuk vs Keluar)
+            { name: 'Arus Uang', icon: 'ri-exchange-funds-line' },
             { name: 'Pengaturan', icon: 'ri-settings-5-line' }
         ]
     }

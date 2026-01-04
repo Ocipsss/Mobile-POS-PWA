@@ -213,11 +213,40 @@
 <script src="components/pages/StrukNota.js"></script>
 <script src="components/pages/Dashboard.js"></script>
 <script src="components/pages/LaporanLabaRugi.js"></script>
+<script src="components/pages/Pengeluaran.js"></script>
+<script src="components/pages/ArusUang.js"></script>
 <script src="js/app.js"></script>
 
 <script>
+    // REGISTRASI SERVICE WORKER DENGAN LOGIKA AUTO-UPDATE
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').catch(err => console.log("SW Error:", err));
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').then(reg => {
+                // Cek update saat file sw.js berubah
+                reg.onupdatefound = () => {
+                    const installingWorker = reg.installing;
+                    installingWorker.onstatechange = () => {
+                        if (installingWorker.state === 'installed') {
+                            if (navigator.serviceWorker.controller) {
+                                // Ada versi baru, beri tahu pengguna
+                                if (confirm("Versi terbaru tersedia. Update aplikasi sekarang?")) {
+                                    window.location.reload();
+                                }
+                            }
+                        }
+                    };
+                };
+            }).catch(err => console.log("SW Error:", err));
+        });
+
+        // Paksa reload jika Service Worker baru mengambil kendali
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) {
+                window.location.reload();
+                refreshing = true;
+            }
+        });
     }
 </script>
 </body>

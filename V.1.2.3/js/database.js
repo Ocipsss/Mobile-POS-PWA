@@ -1,12 +1,13 @@
 // js/database.js //
 const db = new Dexie("SinarPagiDB");
 
-// Versi 11: Membersihkan fitur Tarik Tunai dan tabel cash_out
-db.version(11).stores({
+// Versi 12: Menambahkan tabel expenses untuk mencatat pengeluaran
+db.version(12).stores({
     products: '++id, name, code, category, price_modal, price_sell, qty, unit',
     categories: '++id, name',
     transactions: '++id, date, total, memberId, paymentMethod, amountPaid, change, status',
     members: 'id, name, phone, address, total_spending, points', 
+    expenses: '++id, date, category, amount, note',
     settings: 'id, storeName'
 });
 
@@ -44,6 +45,11 @@ db.categories.hook('creating', (pk, obj) => { syncToCloud('categories', pk || ob
 db.categories.hook('updating', (mods, pk, obj) => { syncToCloud('categories', pk, obj); });
 db.categories.hook('deleting', (pk) => { syncToCloud('categories', pk, null); });
 
+// Expenses (BARU)
+db.expenses.hook('creating', (pk, obj) => { syncToCloud('expenses', pk || obj.id, obj); });
+db.expenses.hook('updating', (mods, pk, obj) => { syncToCloud('expenses', pk, obj); });
+db.expenses.hook('deleting', (pk) => { syncToCloud('expenses', pk, null); });
+
 // Transactions
 db.transactions.hook('creating', (pk, obj) => { syncToCloud('transactions', pk || obj.id, obj); });
 db.transactions.hook('updating', (mods, pk, obj) => {
@@ -60,7 +66,8 @@ db.transactions.hook('deleting', (pk) => { syncToCloud('transactions', pk, null)
 const syncFromCloud = () => {
     if (typeof fdb === 'undefined') return;
 
-    const tables = ['products', 'categories', 'transactions', 'members'];
+    // Menambahkan 'expenses' ke daftar tabel yang dipantau
+    const tables = ['products', 'categories', 'transactions', 'members', 'expenses'];
     tables.forEach(tableName => {
         const ref = fdb.ref(tableName);
         
@@ -122,7 +129,7 @@ window.hitungLabaRugi = async (startDate, endDate) => {
 
 // --- EKSEKUSI JALANKAN DATABASE ---
 db.open().then(() => {
-    console.log("Database SinarPagiDB v11 Aktif (Tarik Tunai Removed)");
+    console.log("Database SinarPagiDB v12 Aktif (Expenses Added)");
     syncFromCloud(); 
 }).catch(err => {
     console.error("Koneksi Database Gagal:", err);
