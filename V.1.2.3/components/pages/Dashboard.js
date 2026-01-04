@@ -64,7 +64,7 @@ const PageDashboard = {
     template: `
     <div class="w-full flex flex-col gap-4 py-2 animate-zoom-in no-scrollbar">
         
-        <div class="w-full bg-blue-600 p-7 rounded-[1rem] text-white shadow-xl shadow-blue-100 relative overflow-hidden">
+        <div class="w-full bg-gray-300 p-7 rounded-[1rem] text-gray-500 shadow-xl shadow-blue-100 relative overflow-hidden">
             <div class="relative z-10">
                 <span class="text-[9px] font-black uppercase tracking-[0.3em] opacity-80">Omzet Hari Ini</span>
                 <h2 class="text-3xl font-black mt-2 tracking-tighter">{{ formatR(stats.omzet) }}</h2>
@@ -130,14 +130,14 @@ const PageDashboard = {
             </div>
         </div>
 
-        <div class="mx-1 bg-gray-900 p-6 rounded-[2rem] text-white flex items-center justify-between relative overflow-hidden">
+        <div class="mx-1 p-6 bg-gray-300 rounded-[1rem] text-white flex items-center justify-between relative overflow-hidden">
             <div class="flex items-center gap-4 relative z-10">
                 <div class="w-10 h-10 bg-white/10 border border-white/20 text-white rounded-xl flex items-center justify-center">
                     <i class="ri-shield-check-fill text-xl text-blue-400"></i>
                 </div>
                 <div>
                     <div class="text-[9px] font-black uppercase tracking-widest leading-none mb-1">Secure Mode</div>
-                    <div class="text-[7px] font-bold text-green-400 uppercase tracking-tighter flex items-center gap-1">
+                    <div class="text-[7px] font-bold text-gray-600 uppercase tracking-tighter flex items-center gap-1">
                         <span class="w-1 h-1 bg-green-500 rounded-full animate-pulse"></span>
                         Cloud Synced
                     </div>
