@@ -1,13 +1,13 @@
 // js/database.js //
 const db = new Dexie("SinarPagiDB");
 
-// Versi 12: Menambahkan tabel expenses untuk mencatat pengeluaran
-db.version(12).stores({
+// Versi 13: Update skema expenses untuk mendukung rincian cashPart & qrisPart
+db.version(13).stores({
     products: '++id, name, code, category, price_modal, price_sell, qty, unit',
     categories: '++id, name',
     transactions: '++id, date, total, memberId, paymentMethod, amountPaid, change, status',
     members: 'id, name, phone, address, total_spending, points', 
-    expenses: '++id, date, category, amount, note',
+    expenses: '++id, date, category, amount, note, paymentMethod, cashPart, qrisPart',
     settings: 'id, storeName'
 });
 
@@ -28,45 +28,41 @@ const syncToCloud = (table, id, data) => {
     }
 };
 
+// --- FUNGSI PAKSA UNGGAH (DORONG DATA LAMA KE CLOUD) ---
+window.forceUploadAll = async () => {
+    if (!confirm("Apakah Anda yakin ingin mengunggah SEMUA data lokal ke Firebase? Data yang sudah ada di Cloud akan diperbarui.")) return;
+    
+    const tables = ['products', 'categories', 'transactions', 'members', 'expenses'];
+    console.log("Memulai sinkronisasi massal...");
+    
+    try {
+        for (const table of tables) {
+            const items = await db[table].toArray();
+            console.log(`Mengunggah ${items.length} data dari tabel ${table}...`);
+            for (const item of items) {
+                await syncToCloud(table, item.id, item);
+            }
+        }
+        alert("Sinkronisasi Selesai! Semua data sekarang ada di Firebase.");
+    } catch (err) {
+        alert("Terjadi kesalahan saat upload: " + err.message);
+    }
+};
+
 // --- HOOKS DATABASE (SINKRONISASI OTOMATIS) ---
+const setupHooks = (tableName) => {
+    db[tableName].hook('creating', (pk, obj) => { syncToCloud(tableName, pk || obj.id, obj); });
+    db[tableName].hook('updating', (mods, pk, obj) => { syncToCloud(tableName, pk, obj); });
+    db[tableName].hook('deleting', (pk) => { syncToCloud(tableName, pk, null); });
+};
 
-// Products
-db.products.hook('creating', (pk, obj) => { syncToCloud('products', pk || obj.id, obj); });
-db.products.hook('updating', (mods, pk, obj) => { syncToCloud('products', pk, obj); });
-db.products.hook('deleting', (pk) => { syncToCloud('products', pk, null); });
-
-// Members
-db.members.hook('creating', (pk, obj) => { syncToCloud('members', pk || obj.id, obj); });
-db.members.hook('updating', (mods, pk, obj) => { syncToCloud('members', pk, obj); });
-db.members.hook('deleting', (pk) => { syncToCloud('members', pk, null); });
-
-// Categories
-db.categories.hook('creating', (pk, obj) => { syncToCloud('categories', pk || obj.id, obj); });
-db.categories.hook('updating', (mods, pk, obj) => { syncToCloud('categories', pk, obj); });
-db.categories.hook('deleting', (pk) => { syncToCloud('categories', pk, null); });
-
-// Expenses (BARU)
-db.expenses.hook('creating', (pk, obj) => { syncToCloud('expenses', pk || obj.id, obj); });
-db.expenses.hook('updating', (mods, pk, obj) => { syncToCloud('expenses', pk, obj); });
-db.expenses.hook('deleting', (pk) => { syncToCloud('expenses', pk, null); });
-
-// Transactions
-db.transactions.hook('creating', (pk, obj) => { syncToCloud('transactions', pk || obj.id, obj); });
-db.transactions.hook('updating', (mods, pk, obj) => {
-    setTimeout(() => {
-        db.transactions.get(pk).then(updated => {
-            if (updated) syncToCloud('transactions', pk, updated);
-        });
-    }, 200);
-});
-db.transactions.hook('deleting', (pk) => { syncToCloud('transactions', pk, null); });
-
+// Daftarkan semua tabel ke hooks
+['products', 'categories', 'transactions', 'members', 'expenses'].forEach(setupHooks);
 
 // --- FUNGSI SINKRONISASI MASUK (CLOUD -> LOCAL) ---
 const syncFromCloud = () => {
     if (typeof fdb === 'undefined') return;
 
-    // Menambahkan 'expenses' ke daftar tabel yang dipantau
     const tables = ['products', 'categories', 'transactions', 'members', 'expenses'];
     tables.forEach(tableName => {
         const ref = fdb.ref(tableName);
@@ -89,19 +85,14 @@ const syncFromCloud = () => {
     });
 };
 
-// --- HELPER LABA RUGI (Hanya Penjualan Produk) ---
+// --- HELPER LABA RUGI ---
 window.hitungLabaRugi = async (startDate, endDate) => {
     try {
         const semuaTransaksi = await db.transactions
             .where('date').between(startDate, endDate, true, true)
             .toArray();
 
-        let stats = {
-            totalOmzet: 0,
-            totalModal: 0,
-            totalLabaBersih: 0,
-            count: semuaTransaksi.length
-        };
+        let stats = { totalOmzet: 0, totalModal: 0, totalLabaBersih: 0, count: semuaTransaksi.length };
 
         semuaTransaksi.forEach(tr => {
             stats.totalOmzet += Number(tr.total || 0);
@@ -110,7 +101,6 @@ window.hitungLabaRugi = async (startDate, endDate) => {
                     const qty = Number(item.qty || 0);
                     const modal = Number(item.price_modal || 0);
                     stats.totalModal += (modal * qty);
-                    
                     if (typeof item.profit !== 'undefined') {
                         stats.totalLabaBersih += Number(item.profit);
                     } else {
@@ -119,7 +109,6 @@ window.hitungLabaRugi = async (startDate, endDate) => {
                 });
             }
         });
-
         return stats;
     } catch (err) {
         console.error("Gagal hitung laba:", err);
@@ -127,9 +116,9 @@ window.hitungLabaRugi = async (startDate, endDate) => {
     }
 };
 
-// --- EKSEKUSI JALANKAN DATABASE ---
+// --- EKSEKUSI ---
 db.open().then(() => {
-    console.log("Database SinarPagiDB v12 Aktif (Expenses Added)");
+    console.log("Database SinarPagiDB v13 Aktif (Ready for Global Sync)");
     syncFromCloud(); 
 }).catch(err => {
     console.error("Koneksi Database Gagal:", err);
