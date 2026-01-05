@@ -119,9 +119,9 @@ const PagePengaturan = {
         return { stats, storeSettings, saveSettings, handleExport, handleImport, handleResetData };
     },
     template: `
-    <div class="p-4 flex flex-col gap-6 pb-24">
+   <div class="w-full flex flex-col gap-4 py-2 animate-zoom-in no-scrollbar px-1 pb-24">
         
-        <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-[2rem] text-white shadow-xl">
+        <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-[1rem] text-white shadow-xl">
             <h3 class="text-sm font-black uppercase tracking-widest opacity-80 m-0">Status Data</h3>
             <div class="grid grid-cols-3 gap-4 mt-4 text-center">
                 <div>
@@ -141,7 +141,7 @@ const PagePengaturan = {
 
         <div class="flex flex-col gap-4">
             <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2">Identitas Toko & Struk</h4>
-            <div class="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col gap-4">
+            <div class="bg-white p-6 rounded-[1rem] border border-gray-100 shadow-sm flex flex-col gap-4">
                 <div>
                     <label class="text-[9px] font-black text-gray-400 uppercase ml-2 mb-1 block">Nama Toko (Header)</label>
                     <input v-model="storeSettings.storeName" type="text" class="form-control font-bold" placeholder="Contoh: Sinar Pagi POS">

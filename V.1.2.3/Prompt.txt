@@ -1,6 +1,5 @@
-pahami file-file dibawah ini
+pahami file file dibawah ini
 
-index.html
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -13,209 +12,177 @@ index.html
     <link rel="stylesheet" href="css/style.css"> 
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="SinarPagi">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SinarPagi">
     <meta name="theme-color" content="#2563eb">
     
     <script src="lib/vue.js"></script>
     <script src="lib/dexie.min.js"></script>
     <script src="lib/unocss.js"></script>
+    <script src="lib/html5-qrcode.min.js"></script>
     
-    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-    <script>eruda.init();</script>
-
     <style>
         [v-cloak] { display: none; }
-        /* Animasi Transisi Halaman */
-        .fade-slide-enter-active, .fade-slide-leave-active {
-            transition: all 0.25s ease;
-        }
-        .fade-slide-enter-from {
-            opacity: 0;
-            transform: translateX(20px);
-        }
-        .fade-slide-leave-to {
-            opacity: 0;
-            transform: translateX(-20px);
-        }
-        /* Animasi Modal */
-        .animate-slide-up {
-            animation: slideUp 0.3s ease-out;
-        }
-        @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
-        .animate-zoom-in {
-            animation: zoomIn 0.2s ease-out;
-        }
-        @keyframes zoomIn {
-            from { opacity: 0; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
-        }
+        .fade-slide-enter-active, .fade-slide-leave-active { transition: all 0.25s ease; }
+        .fade-slide-enter-from { opacity: 0; transform: translateX(20px); }
+        .fade-slide-leave-to { opacity: 0; transform: translateX(-20px); }
+        .animate-slide-up { animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .animate-zoom-in { animation: zoomIn 0.2s ease-out; }
+        @keyframes zoomIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
-    
 </head>
 <body>
 
 <div id="app" v-cloak>
-    <sidebar-nav 
-        :groups="menuGroups" 
-        :active-page="activePage" 
-        @select-page="selectPage">
-    </sidebar-nav>
+    <div v-if="isAuthChecking" class="fixed inset-0 flex items-center justify-center bg-white z-[9999]">
+        <div class="text-center">
+            <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Memeriksa Akses...</p>
+        </div>
+    </div>
 
-    <struk-nota v-if="lastTransaction" :transaksi="lastTransaction" :settings="storeSettings"></struk-nota>
-
-    <div class="main-card" :class="{ 'is-open': isOpen }" @click="isOpen ? isOpen = false : null">
-        
-        <header style="display: flex; flex-direction: column; gap: 10px; padding-bottom: 15px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                
-                <button class="btn-burger" @click.stop="isOpen = !isOpen">
-                    <i :class="isOpen ? 'ri-arrow-left-line' : 'ri-menu-3-line'"></i>
-                </button>
-
-                <div class="text-center">
-                    <div style="display: flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 2px;">
-                        <i class="ri-cloud-line" :style="{ color: isCloudOnline ? '#22c55e' : '#f43f5e', fontSize: '10px' }"></i>
-                        <span style="font-size: 8px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">
-                            {{ isCloudOnline ? 'Cloud Active' : 'Offline' }}
-                        </span>
-                    </div>
-
-                    <span v-if="selectedMember && activePage === 'Penjualan'" 
-                          style="font-size: 10px; font-weight: 800; color: #2563eb; display: block; text-transform: uppercase;">
-                          {{ selectedMember.name }}
-                    </span>
-                    <span style="font-size: 16px; font-weight: 900; color: #1e293b; letter-spacing: -0.5px; line-height: 1;">
-                        {{ activePage }}
-                    </span>
-                </div>
-                
-                <button class="btn-burger" 
-                        @click="activePage === 'Penjualan' ? isMemberModalOpen = true : selectPage('Penjualan')"> 
-                    <i v-if="activePage === 'Penjualan'" 
-                       :class="selectedMember ? 'ri-user-heart-fill text-blue-500' : 'ri-user-search-line'"></i>
-                    <i v-else class="ri-shopping-cart-2-line text-blue-500"></i>
-                </button>
+    <div v-else-if="!isLoggedIn" class="fixed inset-0 flex items-center justify-center bg-[#f8fafc] p-6 z-[9000]">
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm text-center animate-zoom-in">
+            <div class="w-20 h-20 bg-blue-600 text-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-200">
+                <i class="ri-lock-2-fill text-4xl"></i>
             </div>
-            
-            <div v-if="activePage === 'Penjualan'" style="position: relative; width: 100%;">
-                <global-search 
-                    v-model="globalSearchQuery" 
-                    placeholder="Cari Produk atau Scan..."
-                    @input="handleGlobalSearch">
-                </global-search>
+            <h2 class="text-2xl font-black text-gray-800 uppercase tracking-tight mb-2">Sinar Pagi</h2>
+            <div class="flex flex-col gap-4 text-left">
+                <input v-model="loginData.email" type="email" placeholder="Email Admin" class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold outline-none">
+                <input v-model="loginData.password" type="password" placeholder="Password" @keyup.enter="handleLogin" class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold outline-none">
+                <button @click="handleLogin" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-all">Buka Kunci</button>
+            </div>
+        </div>
+    </div>
 
-                <div v-if="searchResults.length > 0 && globalSearchQuery" 
-                     style="position: absolute; top: 100%; left: 0; right: 0; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); z-index: 999; max-height: 250px; overflow-y: auto;">
-                    <div v-for="p in searchResults" :key="p.id" 
-                         @click="addBySearch(p)"
-                         style="padding: 12px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px;">
-                        <div style="flex: 1;">
-                            <div style="font-size: 13px; font-weight: 700; color: #334155;">{{ p.name }}</div>
-                            <div style="font-size: 11px; color: #2563eb; font-weight: 800;">Rp {{ p.price_sell.toLocaleString('id-ID') }}</div>
+    <div v-else>
+        <sidebar-nav :groups="menuGroups" :active-page="activePage" @select-page="selectPage"></sidebar-nav>
+        <struk-nota v-if="lastTransaction" :transaksi="lastTransaction" :settings="storeSettings"></struk-nota>
+
+        <div class="main-card" :class="{ 'is-open': isOpen }" @click="isOpen ? isOpen = false : null">
+            <header class="flex flex-col gap-3 pb-4">
+                <div class="flex justify-between items-center w-full">
+                    <button class="btn-burger" @click.stop="isOpen = !isOpen">
+                        <i :class="isOpen ? 'ri-arrow-left-line' : 'ri-menu-3-line'"></i>
+                    </button>
+                    <div class="text-center">
+                        <div class="flex items-center justify-center gap-1 mb-1">
+                            <i class="ri-cloud-line text-[10px]" :style="{ color: isCloudOnline ? '#22c55e' : '#f43f5e' }"></i>
+                            <span class="text-[8px] font-black uppercase text-gray-400 tracking-widest">{{ isCloudOnline ? 'Online' : 'Offline' }}</span>
                         </div>
-                        <div style="font-size: 10px; color: #94a3b8; font-weight: 600;">Stok: {{ p.qty }}</div>
+                        <span class="text-base font-black text-gray-800 leading-none uppercase">{{ activePage }}</span>
                     </div>
-                </div>
-            </div>
-        </header>
-        <main class="content-scroll">
-            <transition name="fade-slide" mode="out-in">
-                <component 
-                    :is="getComponent(activePage)" 
-                    :key="activePage" 
-                    :cart="cart"
-                    :selected-member="selectedMember"
-                    v-model:pay-method="payMethod"
-                    v-model:cash-amount="cashAmount"
-                    @checkout="prosesBayar"
-                    :page-name="activePage">
-                </component>
-            </transition>
-        </main>
-
-        <div v-if="isMemberModalOpen" class="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 backdrop-blur-sm transition-opacity" @click.self="isMemberModalOpen = false">
-            <div class="bg-white w-full max-w-md rounded-t-[32px] p-6 animate-slide-up shadow-2xl">
-                <div class="flex justify-between items-center mb-6">
-                    <div>
-                        <h3 class="text-lg font-black text-gray-800 uppercase tracking-tight">Pilih Pelanggan</h3>
-                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Pilih untuk riwayat belanja</p>
-                    </div>
-                    <button @click="isMemberModalOpen = false" class="bg-gray-100 border-none w-10 h-10 rounded-full flex items-center justify-center">
-                        <i class="ri-close-line text-xl text-gray-500"></i>
+                    <button class="btn-burger" @click="activePage === 'Penjualan' ? isMemberModalOpen = true : selectPage('Penjualan')"> 
+                        <i v-if="activePage === 'Penjualan'" :class="selectedMember ? 'ri-user-heart-fill text-blue-500' : 'ri-user-search-line'"></i>
+                        <i v-else class="ri-shopping-cart-2-line text-blue-500"></i>
                     </button>
                 </div>
-
-                <div class="mb-6">
-                    <global-search v-model="memberSearchQuery" placeholder="Cari nama, ID, atau HP..."></global-search>
-                </div>
-
-                <div class="max-h-[45vh] overflow-y-auto no-scrollbar flex flex-col gap-3 pb-4">
-                    <div v-for="m in filteredMembers" :key="m.id" 
-                         @click="selectedMember = m; isMemberModalOpen = false" 
-                         class="p-4 border border-gray-100 rounded-2xl flex items-center gap-4 active:bg-blue-50 transition-all shadow-sm bg-white cursor-pointer">
-                        <div class="w-12 h-12 bg-gray-50 text-blue-600 rounded-2xl flex items-center justify-center font-black text-lg border border-gray-100">
-                            {{ m.name.charAt(0).toUpperCase() }}
-                        </div>
-                        <div class="flex-1">
-                            <div class="text-sm font-black text-gray-800">{{ m.name }}</div>
-                            <div class="text-[10px] text-gray-500 font-bold">ID: #{{ m.id }} • {{ m.phone }}</div>
-                        </div>
-                        <div v-if="selectedMember && selectedMember.id === m.id" class="text-blue-500">
-                            <i class="ri-checkbox-circle-fill text-xl"></i>
+                
+                <div v-if="activePage === 'Penjualan' || activePage === 'Daftar Produk'" class="flex gap-2 w-full relative">
+                    <div class="flex-1 relative">
+                        <global-search v-model="globalSearchQuery" placeholder="Cari barang..." @input="handleGlobalSearch"></global-search>
+                        <div v-if="searchResults.length > 0 && globalSearchQuery" class="absolute top-full left-0 right-0 bg-white rounded-2xl shadow-2xl z-[999] mt-2 max-h-60 overflow-y-auto border border-gray-100">
+                            <div v-for="p in searchResults" :key="p.id" @click="addBySearch(p)" class="p-4 border-b border-gray-50 flex justify-between items-center active:bg-blue-50">
+                                <div>
+                                    <div class="text-xs font-black text-gray-800 uppercase">{{ p.name }}</div>
+                                    <div class="text-[10px] font-bold text-blue-600">Rp {{ p.price_sell.toLocaleString('id-ID') }}</div>
+                                </div>
+                                <div class="text-[9px] font-bold text-gray-400">Stok: {{ p.qty }}</div>
+                            </div>
                         </div>
                     </div>
-                    
-                    <button @click="selectPage('Data Member'); isMemberModalOpen = false" 
-                            class="w-full py-4 border-2 border-dashed border-gray-100 rounded-2xl text-gray-400 text-[10px] font-black uppercase mt-2 flex flex-col items-center gap-1">
-                        <i class="ri-user-add-line text-lg"></i>
-                        Kelola Data Pelanggan
+                    <button @click="startScanner" class="w-14 h-12 bg-blue-50 text-blue-600 border-none rounded-xl flex items-center justify-center active:bg-blue-100 transition-all">
+                        <i class="ri-qr-scan-2-line text-xl"></i>
                     </button>
+                </div>
+            </header>
+
+            <main class="content-scroll">
+                <transition name="fade-slide" mode="out-in">
+                    <component 
+                        :is="getComponent(activePage)" 
+                        :key="activePage" 
+                        :cart="cart"
+                        :selected-member="selectedMember"
+                        v-model:pay-method="payMethod"
+                        v-model:cash-amount="cashAmount"
+                        @checkout="prosesBayar"
+                        @open-scanner="startScanner"
+                        :page-name="activePage">
+                    </component>
+                </transition>
+            </main>
+        </div>
+
+        <div v-if="isScannerOpen" class="fixed inset-0 z-[9999] bg-white flex flex-col p-6 animate-zoom-in">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex flex-col">
+                    <span class="text-xs font-black uppercase tracking-widest text-blue-600">Scanner Aktif</span>
+                    <span class="text-[10px] text-gray-400 font-bold uppercase">Arahkan ke Barcode Produk</span>
+                </div>
+                <button @click="stopScanner" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 border-none active:bg-red-50 active:text-red-500 transition-all">
+                    <i class="ri-close-line text-xl"></i>
+                </button>
+            </div>
+            <div id="reader" class="rounded-[2.5rem] overflow-hidden border-4 border-blue-50 shadow-sm bg-gray-50"></div>
+            <div class="mt-auto py-8 text-center">
+                <div class="flex items-center justify-center gap-2 mb-2">
+                    <div class="w-1 h-1 bg-blue-600 rounded-full animate-ping"></div>
+                    <span class="text-[9px] text-gray-400 font-black tracking-[0.3em] uppercase">Sinar Pagi System</span>
                 </div>
             </div>
         </div>
 
-        <div v-if="isConfirmModalOpen" class="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl animate-zoom-in">
-                <div class="text-center mb-6">
-                    <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="ri-shopping-cart-2-line text-3xl"></i>
-                    </div>
-                    <h4 class="text-xl font-black text-gray-800 uppercase tracking-tight">Konfirmasi</h4>
-                    <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Total Belanja</p>
-                    <div class="text-3xl font-black text-blue-600 mt-1">Rp {{ totalBayar.toLocaleString('id-ID') }}</div>
+        <div v-if="isMemberModalOpen" class="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 backdrop-blur-sm" @click.self="isMemberModalOpen = false">
+            <div class="bg-white w-full max-w-md rounded-t-[32px] p-6 animate-slide-up shadow-2xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-black text-gray-800 uppercase tracking-tight">Pilih Pelanggan</h3>
+                    <button @click="isMemberModalOpen = false" class="bg-gray-100 border-none w-10 h-10 rounded-full flex items-center justify-center"><i class="ri-close-line"></i></button>
                 </div>
-                <div class="flex flex-col gap-3">
-                    <button @click="eksekusiBayar" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase shadow-lg shadow-blue-100 active:scale-95 transition-all">YA, PROSES</button>
-                    <button @click="isConfirmModalOpen = false" class="w-full py-2 text-gray-400 font-bold uppercase text-[10px] tracking-widest">BATALKAN</button>
+                <div class="mb-4"><global-search v-model="memberSearchQuery" placeholder="Cari nama..."></global-search></div>
+                <div class="max-h-[40vh] overflow-y-auto no-scrollbar flex flex-col gap-2">
+                    <div v-for="m in filteredMembers" :key="m.id" @click="selectedMember = m; isMemberModalOpen = false" class="p-4 border border-gray-100 rounded-2xl flex items-center gap-4 active:bg-blue-50 transition-all">
+                        <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-black">{{ m.name.charAt(0) }}</div>
+                        <div class="flex-1 text-sm font-black text-gray-800">{{ m.name }}</div>
+                        <i v-if="selectedMember?.id === m.id" class="ri-checkbox-circle-fill text-blue-500 text-xl"></i>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div v-if="isSuccessModalOpen" class="fixed inset-0 z-[1001] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
             <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl animate-zoom-in">
-                <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="ri-checkbox-circle-fill text-5xl"></i>
-                </div>
+                <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4"><i class="ri-checkbox-circle-fill text-5xl"></i></div>
                 <h4 class="text-xl font-black text-gray-800 uppercase tracking-tight">Berhasil!</h4>
-                <p class="text-sm text-gray-500 mb-8">Transaksi telah dicatat ke sistem.</p>
-                <div class="flex flex-col gap-3">
-                    <button @click="cetakStrukTerakhir" class="w-full py-4 bg-gray-900 text-white rounded-2xl font-black uppercase active:scale-95 transition-all">CETAK STRUK</button>
-                    <button @click="isSuccessModalOpen = false" class="w-full py-4 bg-gray-100 text-gray-600 rounded-2xl font-black uppercase active:scale-95 transition-all">SELESAI</button>
+                <div class="flex flex-col gap-3 mt-8">
+                    <button @click="cetakStrukTerakhir" class="w-full py-4 bg-gray-900 text-white rounded-2xl font-black uppercase">CETAK STRUK</button>
+                    <button @click="isSuccessModalOpen = false" class="w-full py-4 bg-gray-100 text-gray-600 rounded-2xl font-black uppercase">SELESAI</button>
                 </div>
             </div>
         </div>
-
+        
+        <div v-if="isConfirmModalOpen" class="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl animate-zoom-in">
+                <div class="text-center mb-6">
+                    <h4 class="text-xl font-black text-gray-800 uppercase tracking-tight">Konfirmasi</h4>
+                    <div class="text-3xl font-black text-blue-600 mt-2">Rp {{ totalBayar.toLocaleString('id-ID') }}</div>
+                </div>
+                <div class="flex flex-col gap-3">
+                    <button @click="eksekusiBayar" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase shadow-lg">YA, PROSES</button>
+                    <button @click="isConfirmModalOpen = false" class="w-full py-2 text-gray-400 font-bold uppercase text-[10px]">BATALKAN</button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
 <script>
   const firebaseConfig = {
@@ -230,6 +197,7 @@ index.html
   firebase.initializeApp(firebaseConfig);
   const fdb = firebase.database();
 </script>
+
 <script src="js/database.js"></script>
 <script src="js/routes.js"></script>
 <script src="components/GlobalSearch.js"></script>
@@ -247,472 +215,49 @@ index.html
 <script src="components/pages/StrukNota.js"></script>
 <script src="components/pages/Dashboard.js"></script>
 <script src="components/pages/LaporanLabaRugi.js"></script>
-<script src="js/backup.js"></script>
+<script src="components/pages/Pengeluaran.js"></script>
+<script src="components/pages/ArusUang.js"></script>
+<script src="components/pages/DigitalSvc.js"></script>
+<script src="components/pages/Transaksi.js"></script>
 <script src="js/app.js"></script>
+
 <script>
+    // REGISTRASI SERVICE WORKER DENGAN LOGIKA AUTO-UPDATE
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js');
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').then(reg => {
+                // Cek update saat file sw.js berubah
+                reg.onupdatefound = () => {
+                    const installingWorker = reg.installing;
+                    installingWorker.onstatechange = () => {
+                        if (installingWorker.state === 'installed') {
+                            if (navigator.serviceWorker.controller) {
+                                // Ada versi baru, beri tahu pengguna
+                                if (confirm("Versi terbaru tersedia. Update aplikasi sekarang?")) {
+                                    window.location.reload();
+                                }
+                            }
+                        }
+                    };
+                };
+            }).catch(err => console.log("SW Error:", err));
+        });
+
+        // Paksa reload jika Service Worker baru mengambil kendali
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) {
+                window.location.reload();
+                refreshing = true;
+            }
+        });
     }
 </script>
 </body>
 </html>
 
 
-manifest.json
-{
-  "name": "Sistem Kasir Pintar",
-  "short_name": "Kasir",
-  "start_url": "/index.html",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2563eb",
-  "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
-}
-
-
-sw.js
-const CACHE_NAME = 'sinar-pagi-v1';
-
-// Instalasi: Lewati masa tunggu agar SW langsung aktif
-self.addEventListener('install', (event) => {
-    self.skipWaiting();
-    console.log('SW: Service Worker Installed');
-});
-
-// Aktivasi: Bersihkan cache lama jika ada
-self.addEventListener('activate', (event) => {
-    event.waitUntil(clients.claim());
-    console.log('SW: Service Worker Activated');
-});
-
-// Fetch: Strategi Network-First agar data cloud selalu update
-self.addEventListener('fetch', (event) => {
-    event.respondWith(
-        fetch(event.request).catch(() => {
-            return caches.match(event.request);
-        })
-    );
-});
-
-
-components/GlobalSearch.js
-// components/GlobalSearch.js
-const GlobalSearchComponent = {
-    props: ['modelValue', 'placeholder'],
-    emits: ['update:modelValue'],
-    template: `
-        <div class="relative flex items-center group w-full">
-            <input 
-                :value="modelValue" 
-                @input="$emit('update:modelValue', $event.target.value)"
-                type="text" 
-                :placeholder="placeholder || 'Cari...'" 
-                class="w-full pl-4 pr-20 py-3 bg-white border border-gray-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-sm !mb-0"
-            >
-            <div class="absolute right-3 flex items-center gap-2">
-                <button v-if="modelValue" @click="$emit('update:modelValue', '')" class="w-7 h-7 flex items-center justify-center bg-gray-100 rounded-full border-none">
-                    <i class="ri-close-line text-gray-500"></i>
-                </button>
-                <i class="ri-search-2-line text-gray-400 group-focus-within:text-blue-500 text-lg mr-1"></i>
-            </div>
-        </div>
-    `
-};
-
-
-components/Layout.js
-// components/Layout.js
-const SidebarComponent = {
-    props: ['groups', 'activePage'],
-    template: `
-        <div class="back-menu">
-            <div class="brand-section">
-                <span class="brand-name">SINAR PAGI</span>
-            </div>
-            <div v-for="group in groups" :key="group.title">
-                <div class="menu-group-title">{{ group.title }}</div>
-                <ul class="menu-list">
-                    <li v-for="m in group.items" 
-                        class="menu-item" 
-                        :class="{ active: activePage === m.name }"
-                        @click="$emit('select-page', m.name)"> 
-                        <i :class="m.icon"></i>
-                        <span>{{ m.name }}</span>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    `
-};
-
-
-components/Placeholder.js
-//components/Placeholder.js
-const PlaceholderComponent = {
-    props: ['pageName'],
-    template: `
-        <div class="flex flex-col items-center justify-center py-20 text-center opacity-40">
-            <div class="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-6">
-                <i class="ri-tools-line text-5xl text-gray-500"></i>
-            </div>
-            <h4 class="m-0 text-gray-800 text-xl font-bold">{{ pageName }}</h4>
-            <p class="text-sm text-gray-600 mt-2">
-                Halaman ini sedang dalam tahap pengembangan <br> 
-                oleh tim Sinar Pagi.
-            </p>
-            <div class="mt-8 px-6 py-2 border-2 border-dashed border-gray-300 rounded-lg">
-                <span class="text-[10px] font-mono text-gray-500 uppercase tracking-widest">
-                    Module: modules/{{ pageName.replace(/\s+/g, '-').toLowerCase() }}.js
-                </span>
-            </div>
-        </div>
-    `
-};
-
-
-css/style.css
-/* css/style.css */
-body { 
-    background: #0f172a; 
-    margin: 0; 
-    overflow: hidden; 
-    font-family: sans-serif;
-}
-
-/* Pastikan header tetap di atas dan tidak bergeser */
-header { 
-    position: sticky;
-    top: 0;
-    padding: 15px 20px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: space-between;
-    background: white;
-    border-bottom: 1px solid #e2e8f0;
-    z-index: 20; /* Lebih tinggi dari konten */
-}
-
-/* Area konten yang bisa di-scroll */
-.content-scroll { 
-    flex: 1; 
-    overflow-y: auto; 
-    padding: 20px; 
-    /* Tambahkan padding bawah agar tidak tertutup tombol bayar/checkout */
-    padding-bottom: 120px; 
-    background: #f1f5f9;
-}
-
-/* Memperbaiki input agar seragam dan rapi */
-.form-control {
-    display: block;
-    width: 100%;
-    padding: 12px;
-    font-size: 0.9rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    background: #fff;
-    transition: border-color 0.2s;
-    margin-top: 5px;
-}
-
-.form-control:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-/* Memperbaiki jarak antar grup form */
-.grid.grid-cols-2.gap-4 {
-    gap: 1rem;
-    margin-top: 10px;
-}
-
-
-
-/* Navigasi Samping (Sidebar) */
-.back-menu {
-    position: fixed;
-    inset: 0;
-    padding: 20px;
-    color: white;
-    overflow-y: auto;
-    padding-bottom: 100px;
-    z-index: 1;
-}
-
-.brand-section {
-    padding: 20px 10px;
-    margin-bottom: 15px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-}
-
-.brand-name {
-    font-size: 1.8rem;
-    font-weight: 900;
-    color: #fbbf24; 
-    letter-spacing: -0.02em;
-    text-transform: uppercase;
-    line-height: 1;
-    text-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
-}
-
-.menu-group-title {
-    font-size: 0.65rem;
-    font-weight: 800;
-    color: #475569;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    margin: 25px 0 10px 10px;
-}
-
-.menu-list { list-style: none; padding: 0; margin: 0; }
-.menu-item {
-    padding: 12px 15px;
-    font-size: 0.95rem;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    color: #94a3b8;
-    border-radius: 12px;
-    margin-bottom: 4px;
-    cursor: pointer;
-}
-.menu-item.active { 
-    color: #fbbf24; 
-    background: rgba(251, 191, 36, 0.1);
-    font-weight: 600;
-}
-
-/* Kartu Utama (Layar Putih) */
-.main-card {
-    position: fixed;
-    inset: 0;
-    background: #f1f5f9;
-    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    z-index: 10;
-    box-shadow: -10px 0 30px rgba(0,0,0,0.5);
-    display: flex;
-    flex-direction: column;
-    transform-origin: center left;
-}
-
-.main-card.is-open {
-    transform: translateX(75%) scale(0.9);
-    border-radius: 40px;
-    cursor: pointer; 
-}
-
-.main-card.is-open::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0.02);
-    z-index: 100;
-}
-
-header { 
-    padding: 15px 20px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: space-between;
-    background: white;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.btn-burger {
-    background: #f8fafc !important;
-    border: none !important;
-    color: #1e293b !important;
-    padding: 10px !important;
-    margin: 0 !important;
-    border-radius: 12px !important;
-}
-
-.content-scroll { 
-    flex: 1; 
-    overflow-y: auto; 
-    padding: 15px; 
-}
-
-/* ... Tambahkan sisa CSS search-box, cart-item, dan btn-pay dari file lama Anda ... */
-
-/* fitur scroll internal */
-.sidebar {
-    overflow-y: auto;
-    height: 100vh;
-}
-
-/* end-fitur scroll internal */
-
-/* efek halus edit produk */
-@keyframes slide-up {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
-}
-
-.animate-slide-up {
-    animation: slide-up 0.3s ease-out;
-}
-
-/* end-efek halus */
-
-/* b.v.1.0.3
-
-/* Menghilangkan scrollbar tapi tetap bisa di-scroll */
-.no-scrollbar::-webkit-scrollbar {
-    display: none;
-}
-.no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-
-/* Glassmorphism effect untuk sticky header di daftar produk */
-.sticky-nav-filter {
-    backdrop-filter: blur(8px);
-    background: rgba(241, 245, 249, 0.8) !important;
-}
-
-/* Membuat container utama penjualan memenuhi layar */
-.content-scroll {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Transisi halus untuk panel melayang */
-.animate-slide-up {
-    animation: slideUp 0.3s ease-out;
-}
-
-@keyframes slideUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-/* Gaya Input Tunai yang menyatu (Compact) */
-.compact-pay-input {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.compact-pay-input:focus-within {
-    transform: scale(1.02);
-    background-color: #1e40af; /* Biru lebih gelap saat fokus */
-}
-
-/* Scrollbar halus agar tidak memakan ruang visual */
-.no-scrollbar::-webkit-scrollbar {
-    display: none;
-}
-.no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-/* Animasi Slide Up untuk Kotak Biru */
-.animate-slide-up {
-    animation: slideUp 0.3s ease-out forwards;
-}
-
-@keyframes slideUp {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
-    }
-    
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-/* Transisi halus untuk area list produk saat padding berubah */
-.transition-all {
-    transition-property: all;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 500ms;
-}
-
-/* CSS untuk layar (sembunyikan struk di layar) */
-.print-only {
-    display: none;
-}
-
-/* CSS khusus cetak */
-@media print {
-    body * {
-        visibility: hidden;
-    }
-    .print-only, .print-only * {
-        visibility: visible;
-    }
-    .print-only {
-        display: block;
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-    }
-    @page {
-        size: 58mm auto; /* Menyesuaikan kertas printer thermal */
-        margin: 0;
-    }
-    .struk-wrapper {
-        width: 50mm; /* Sesuai area cetak printer 58mm */
-        padding: 2mm;
-        font-family: 'Courier New', Courier, monospace;
-        font-size: 10px;
-        line-height: 1.2;
-        color: #000;
-    }
-    .text-right { text-align: right; }
-    .struk-header { text-align: center; margin-bottom: 5px; }
-    .store-name { font-size: 14px; font-weight: bold; margin: 0; }
-    .struk-info { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 5px; }
-    .item-row { margin-bottom: 3px; }
-    .item-details { display: grid; grid-template-columns: 1fr 1fr; }
-    .total-row { display: grid; grid-template-columns: 1fr 1fr; font-weight: bold; margin-top: 2px; }
-    .struk-footer { text-align: center; margin-top: 10px; font-size: 8px; }
-    .struk-divider { text-align: center; margin: 2px 0; }
-}
-/* Animasi Perpindahan Halaman */
-.fade-slide-enter-active,
-.fade-slide-leave-active {
-  transition: all 0.3s ease-out;
-}
-
-.fade-slide-enter-from {
-  opacity: 0;
-  transform: translateX(30px); /* Muncul dari kanan */
-}
-
-.fade-slide-leave-to {
-  opacity: 0;
-  transform: translateX(-30px); /* Menghilang ke kiri */
-}
-
-/* Tambahan: Efek Bounce untuk Icon Keranjang agar lebih hidup */
-@keyframes cart-bounce {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.2); }
-}
-.animate-cart {
-  animation: cart-bounce 0.3s ease-in-out;
-}
-
-/* end b.v.1.0.3
-
-js/app.js
+// Full Replace isi js/app.js dengan ini //
 const { createApp, ref, computed, onMounted, watch } = Vue;
 
 const app = createApp({
@@ -730,18 +275,26 @@ const app = createApp({
         'page-stock-monitor': PageStockMonitor,
         'page-piutang-penjualan': PagePiutangPenjualan,
         'page-dashboard': PageDashboard,
-        // Menggunakan window. untuk memastikan variabel dari file eksternal terbaca
         'page-laba-rugi': window.PageLabaRugi, 
+        'page-pengeluaran': PagePengeluaran,
+        'page-transaksi': PageTransaksi, // TAMBAHAN: Komponen Riwayat Transaksi
+        'page-arus-uang': typeof PageArusUang !== 'undefined' ? PageArusUang : PlaceholderComponent,
+        'page-digital-svc': typeof PageDigitalSvc !== 'undefined' ? PageDigitalSvc : PlaceholderComponent,
         'struk-nota': StrukNota, 
     },
     
     setup() {
+        const isLoggedIn = ref(false);
+        const loginData = ref({ email: '', password: '' });
+        const isAuthChecking = ref(true);
         const isCloudOnline = ref(false);
         const isOpen = ref(false);
         const activePage = ref('Penjualan');
         const cart = ref([]); 
         const menuGroupsData = ref([]);
         const storeSettings = ref({ storeName: 'SINAR PAGI', address: 'Jl. Raya No. 1', phone: '08123xxxx' });
+        const isScannerOpen = ref(false);
+        let html5QrCode = null;
 
         const isConfirmModalOpen = ref(false);
         const isSuccessModalOpen = ref(false);
@@ -761,20 +314,83 @@ const app = createApp({
             listMemberDB.value = await db.members.toArray();
         };
 
-        onMounted(() => {
-            if (typeof fdb !== 'undefined') {
-                fdb.ref(".info/connected").on("value", (snap) => {
-                    isCloudOnline.value = snap.val() === true;
-                });
+        const handleLogin = async () => {
+            if (!loginData.value.email || !loginData.value.password) return alert("Isi email dan password!");
+            try {
+                await firebase.auth().signInWithEmailAndPassword(loginData.value.email, loginData.value.password);
+            } catch (err) {
+                alert("Gagal Login: " + err.message);
             }
-            refreshData();
+        };
+
+        const handleLogout = () => {
+            if (confirm("Keluar dari sistem?")) firebase.auth().signOut();
+        };
+
+        onMounted(() => {
+            firebase.auth().onAuthStateChanged((user) => {
+                isAuthChecking.value = false;
+                if (user) {
+                    isLoggedIn.value = true;
+                    if (typeof fdb !== 'undefined') {
+                        fdb.ref(".info/connected").on("value", (snap) => isCloudOnline.value = snap.val() === true);
+                    }
+                    refreshData();
+                } else {
+                    isLoggedIn.value = false;
+                }
+            });
         });
 
-        watch(isMemberModalOpen, async (val) => { if (val) listMemberDB.value = await db.members.toArray(); });
+        const startScanner = () => {
+            isScannerOpen.value = true;
+            setTimeout(() => {
+                html5QrCode = new Html5Qrcode("reader");
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 15, qrbox: { width: 250, height: 150 } },
+                    async (decodedText) => {
+                        if (navigator.vibrate) navigator.vibrate(100);
+                        if (activePage.value === 'Tambah Produk') {
+                            const inputBarcode = document.querySelector('input[placeholder="Scan atau manual..."]');
+                            if (inputBarcode) {
+                                inputBarcode.value = decodedText;
+                                inputBarcode.dispatchEvent(new Event('input', { bubbles: true }));
+                                stopScanner();
+                            }
+                        } 
+                        else {
+                            const product = await db.products.where('code').equals(decodedText).first();
+                            if (product) {
+                                addBySearch(product);
+                                stopScanner();
+                            } else {
+                                alert("Produk tidak ditemukan: " + decodedText);
+                                stopScanner();
+                            }
+                        }
+                    }
+                ).catch(err => {
+                    console.error(err);
+                    isScannerOpen.value = false;
+                });
+            }, 300);
+        };
+
+        const stopScanner = () => {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    isScannerOpen.value = false;
+                });
+            } else {
+                isScannerOpen.value = false;
+            }
+        };
 
         const filteredMembers = computed(() => {
             const q = memberSearchQuery.value.toLowerCase();
-            return q ? listMemberDB.value.filter(m => m.name.toLowerCase().includes(q) || m.id.toString().includes(q)) : listMemberDB.value;
+            return !q ? listMemberDB.value : listMemberDB.value.filter(m => m.name.toLowerCase().includes(q) || m.id.toString().includes(q));
         });
 
         const totalBayar = computed(() => cart.value.reduce((sum, item) => sum + (item.price_sell * item.qty), 0));
@@ -782,7 +398,7 @@ const app = createApp({
         const prosesBayar = () => {
             if (cart.value.length === 0) return;
             if (payMethod.value === 'tempo' && !selectedMember.value) {
-                alert("Pilih Member untuk metode TEMPO!");
+                alert("Pilih Member!");
                 isMemberModalOpen.value = true;
                 return;
             }
@@ -793,41 +409,36 @@ const app = createApp({
             isConfirmModalOpen.value = false;
             const total = totalBayar.value;
             let paid = (payMethod.value === 'cash') ? (cashAmount.value ? Number(cashAmount.value) : total) : 0;
-            let statusBaru = payMethod.value === 'cash' ? 'lunas' : 'hutang';
 
             try {
-                const mappedItems = cart.value.map(item => {
-                    const modal = Number(item.price_modal || 0);
-                    const jual = Number(item.price_sell || 0);
-                    return {
-                        id: item.id,
-                        name: item.name,
-                        qty: item.qty,
-                        price_modal: modal,
-                        price_sell: jual,
-                        profit: (jual - modal) * item.qty
-                    };
-                });
-
                 const transData = {
                     date: new Date().toISOString(),
                     total: total,
                     memberId: selectedMember.value ? selectedMember.value.id : null,
-                    items: mappedItems,
+                    items: cart.value.map(i => ({...i})),
                     paymentMethod: payMethod.value,
                     amountPaid: paid,
-                    change: (payMethod.value === 'cash' && paid > total) ? (paid - total) : 0,
-                    status: statusBaru,
-                    payments: [],
-                    kasir: localStorage.getItem('activeKasir') || 'Pemilik'
+                    change: (paid > total) ? (paid - total) : 0,
+                    status: payMethod.value === 'cash' ? 'lunas' : 'hutang',
+                    kasir: 'Admin'
                 };
 
                 const id = await db.transactions.add(transData);
                 lastTransaction.value = { id, ...transData };
 
+                if (typeof fdb !== 'undefined' && isCloudOnline.value) {
+                    await fdb.ref('transactions/' + id).set({ id, ...transData });
+                }
+
                 for (const item of cart.value) {
                     const p = await db.products.get(item.id);
-                    if (p) await db.products.update(item.id, { qty: p.qty - item.qty });
+                    if (p) {
+                        const newQty = p.qty - item.qty;
+                        await db.products.update(item.id, { qty: newQty });
+                        if (typeof fdb !== 'undefined' && isCloudOnline.value) {
+                            await fdb.ref('products/' + item.id).update({ qty: newQty });
+                        }
+                    }
                 }
                 
                 isSuccessModalOpen.value = true;
@@ -837,14 +448,14 @@ const app = createApp({
 
         const cetakStrukTerakhir = () => {
             isSuccessModalOpen.value = false;
-            setTimeout(() => { window.print(); }, 500);
+            setTimeout(() => window.print(), 500);
         };
 
         const handleGlobalSearch = async () => {
             if (!globalSearchQuery.value) { searchResults.value = []; return; }
             const query = globalSearchQuery.value.toLowerCase();
             const all = await db.products.toArray();
-            searchResults.value = all.filter(p => p.name?.toLowerCase().includes(query) || p.code?.toLowerCase().includes(query)).slice(0, 5); 
+            searchResults.value = all.filter(p => (p.name?.toLowerCase().includes(query)) || (p.code?.includes(query))).slice(0, 5); 
         };
 
         const addBySearch = (product) => {
@@ -857,209 +468,193 @@ const app = createApp({
         
         const getComponent = (pageName) => {
             const map = {
-                'Penjualan': 'page-penjualan',
+                'Penjualan': 'page-penjualan', 
                 'Tambah Produk': 'page-tambah-produk',
-                'Kategori Produk': 'page-kategori',
+                'Kategori Produk': 'page-kategori', 
                 'Daftar Produk': 'page-daftar-produk',
-                'Data Member': 'page-data-member',
+                'Data Member': 'page-data-member', 
                 'Pengaturan': 'page-pengaturan',
-                'Laporan Harian': 'page-laporan-harian',
+                'Laporan Harian': 'page-laporan-harian', 
                 'Stock Monitor': 'page-stock-monitor',
-                'Piutang Penjualan': 'page-piutang-penjualan',
-                'Dashboard': 'page-dashboard',
+                'Piutang Penjualan': 'page-piutang-penjualan', 
+                'Dashboard': 'page-dashboard', 
                 'Laba Rugi': 'page-laba-rugi',
+                'Pengeluaran': 'page-pengeluaran',
+                'Riwayat Transaksi': 'page-transaksi', // TAMBAHAN: Map ke komponen riwayat
+                'Arus Uang': 'page-arus-uang',
+                'Layanan Digital': 'page-digital-svc' 
             };
             return map[pageName] || 'page-placeholder';
         };
         
         return {
+            isLoggedIn, loginData, isAuthChecking, handleLogin, handleLogout,
             isOpen, activePage, cart, totalBayar, prosesBayar, getComponent, selectPage,
             payMethod, cashAmount, lastTransaction, storeSettings, isCloudOnline,
             menuGroups: menuGroupsData, isMemberModalOpen, selectedMember, 
             memberSearchQuery, filteredMembers, globalSearchQuery, searchResults, 
-            handleGlobalSearch, addBySearch,
-            isConfirmModalOpen, isSuccessModalOpen, eksekusiBayar, cetakStrukTerakhir          
+            handleGlobalSearch, addBySearch, isConfirmModalOpen, isSuccessModalOpen, 
+            eksekusiBayar, cetakStrukTerakhir, isScannerOpen, startScanner, stopScanner          
         }
     }
 });
 app.mount('#app');
 
 
-js/backup.js
-// js/backup.js
 
-const BackupService = {
-    // 1. EXPORT: Mengambil semua data dari Dexie dan menjadikannya file JSON
-    exportData: async () => {
-        try {
-            const tables = ['products', 'categories', 'transactions', 'members', 'settings'];
-            const backup = {
-                appName: "Sinar Pagi POS",
-                exportDate: new Date().toISOString(),
-                database: {}
-            };
-
-            for (const table of tables) {
-                backup.database[table] = await db[table].toArray();
-            }
-
-            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Backup_SinarPagi_${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            return { success: true, message: "Backup berhasil diunduh" };
-        } catch (error) {
-            console.error("Export Error:", error);
-            return { success: false, message: error.message };
-        }
-    },
-
-    // 2. IMPORT: Membaca file JSON dan memasukkannya ke dalam Dexie
-    importData: async (file) => {
-        try {
-            const reader = new FileReader();
-            
-            const result = await new Promise((resolve, reject) => {
-                reader.onload = async (e) => {
-                    try {
-                        const content = JSON.parse(e.target.result);
-                        
-                        // Validasi sederhana apakah ini file backup kita
-                        if (content.appName !== "Sinar Pagi POS") {
-                            throw new Error("File bukan backup Sinar Pagi POS yang valid");
-                        }
-
-                        // Konfirmasi sebelum menimpa data
-                        if (!confirm("Hati-hati! Data saat ini akan diganti dengan data dari file backup. Lanjutkan?")) {
-                            return resolve({ success: false, message: "Import dibatalkan" });
-                        }
-
-                        // Proses pemulihan data per tabel
-                        for (const tableName in content.database) {
-                            if (db[tableName]) {
-                                await db[tableName].clear(); // Hapus data lama
-                                await db[tableName].bulkAdd(content.database[tableName]); // Masukkan data backup
-                            }
-                        }
-
-                        resolve({ success: true, message: "Data berhasil dipulihkan!" });
-                    } catch (err) {
-                        reject(err);
-                    }
-                };
-                reader.readAsText(file);
-            });
-
-            return result;
-        } catch (error) {
-            console.error("Import Error:", error);
-            return { success: false, message: error.message };
-        }
-    }
-};
-
-
-js/database.js
 // js/database.js //
-
 const db = new Dexie("SinarPagiDB");
 
-// Versi 8 - Pastikan index 'date' ada untuk pencarian Laba Rugi
-db.version(8).stores({
+/**
+ * Versi 16: Memastikan sinkronisasi tabel transaksi reguler 
+ * dan digital berjalan harmonis.
+ */
+db.version(16).stores({
     products: '++id, name, code, category, price_modal, price_sell, qty, unit',
     categories: '++id, name',
-    transactions: '++id, date, total, memberId, paymentMethod, amountPaid, change, status', // Ditambahkan index date
-    members: '++id, name, phone, address',
+    transactions: '++id, date, total, memberId, paymentMethod, amountPaid, change, status',
+    members: 'id, name, phone, address, total_spending, points', 
+    expenses: '++id, date, category, amount, note, paymentMethod, cashPart, qrisPart',
+    digital_transactions: '++id, date, type, provider, nominal, adminFee, adminPaymentMethod, totalReceived, profit',
     settings: 'id, storeName'
 });
 
-// Fungsi Sinkronisasi Cloud dengan proteksi error
+// --- FUNGSI SINKRONISASI KELUAR (LOCAL -> CLOUD) ---
 const syncToCloud = (table, id, data) => {
-    if (typeof fdb !== 'undefined' && id !== undefined) {
+    if (typeof fdb !== 'undefined' && id !== undefined && id !== null) {
         try {
             const ref = fdb.ref(table + '/' + id);
             if (data === null) {
                 ref.remove();
             } else {
-                // Gunakan JSON.parse(JSON.stringify) untuk membersihkan prototype Dexie
-                ref.set(JSON.parse(JSON.stringify(data)));
+                // Pastikan data bersih dari reaktivitas Vue (jika ada)
+                const cleanData = JSON.parse(JSON.stringify(data));
+                ref.set(cleanData);
             }
         } catch (e) {
-            console.warn("Cloud Sync Failed:", e.message);
+            console.warn(`Cloud Sync Failed [${table}]:`, e.message);
         }
     }
 };
 
-// --- HOOKS DATABASE ---
+// --- FUNGSI PAKSA UNGGAH (DORONG DATA LAMA KE CLOUD) ---
+window.forceUploadAll = async () => {
+    if (!confirm("Apakah Anda yakin ingin mengunggah SEMUA data lokal ke Firebase? Data di Cloud akan diperbarui.")) return;
+    
+    const tables = ['products', 'categories', 'transactions', 'members', 'expenses', 'digital_transactions'];
+    console.log("Memulai sinkronisasi massal...");
+    
+    try {
+        for (const table of tables) {
+            const items = await db[table].toArray();
+            console.log(`Mengunggah ${items.length} data dari tabel ${table}...`);
+            for (const item of items) {
+                // Gunakan item.id atau pk yang tersedia
+                const pk = item.id || item.code; 
+                await syncToCloud(table, pk, item);
+            }
+        }
+        alert("Sinkronisasi Selesai!");
+    } catch (err) {
+        alert("Terjadi kesalahan saat upload: " + err.message);
+    }
+};
 
-db.products.hook('creating', (pk, obj) => { syncToCloud('products', pk || obj.id, obj); });
-db.products.hook('updating', (mods, pk, obj) => { syncToCloud('products', pk, obj); });
-db.products.hook('deleting', (pk) => { syncToCloud('products', pk, null); });
+// --- HOOKS DATABASE (SINKRONISASI OTOMATIS) ---
+const setupHooks = (tableName) => {
+    db[tableName].hook('creating', (pk, obj) => { 
+        // pk seringkali undefined saat creating jika auto-increment, 
+        // maka kita kirim obj.id setelah Dexie menyimpannya atau pk jika tersedia
+        setTimeout(() => {
+            const finalId = pk || obj.id;
+            if (finalId) syncToCloud(tableName, finalId, obj);
+        }, 100);
+    });
+    db[tableName].hook('updating', (mods, pk, obj) => { syncToCloud(tableName, pk, obj); });
+    db[tableName].hook('deleting', (pk) => { syncToCloud(tableName, pk, null); });
+};
 
-db.members.hook('creating', (pk, obj) => { syncToCloud('members', pk || obj.id, obj); });
-db.members.hook('updating', (mods, pk, obj) => { syncToCloud('members', pk, obj); });
-db.members.hook('deleting', (pk) => { syncToCloud('members', pk, null); });
+// Daftarkan semua tabel ke hooks
+const allTables = ['products', 'categories', 'transactions', 'members', 'expenses', 'digital_transactions'];
+allTables.forEach(setupHooks);
 
-db.transactions.hook('creating', (pk, obj) => { syncToCloud('transactions', pk || obj.id, obj); });
-db.transactions.hook('updating', (mods, pk, obj) => {
-    // Gunakan timeout sedikit agar data selesai diupdate di IndexedDB sebelum dikirim ke Cloud
-    setTimeout(() => {
-        db.transactions.get(pk).then(updated => {
-            if (updated) syncToCloud('transactions', pk, updated);
+// --- FUNGSI SINKRONISASI MASUK (CLOUD -> LOCAL) ---
+const syncFromCloud = () => {
+    if (typeof fdb === 'undefined') return;
+
+    allTables.forEach(tableName => {
+        const ref = fdb.ref(tableName);
+        
+        ref.on('child_added', async (snapshot) => {
+            const data = snapshot.val();
+            if (data) await db[tableName].put(data); 
         });
-    }, 100);
-});
-db.transactions.hook('deleting', (pk) => { syncToCloud('transactions', pk, null); });
 
-db.open().catch(err => console.error("DB Error:", err));
+        ref.on('child_changed', async (snapshot) => {
+            const data = snapshot.val();
+            if (data) await db[tableName].put(data);
+        });
 
-// --- HELPER LABA RUGI (REVISI LOGIKA) ---
+        ref.on('child_removed', async (snapshot) => {
+            const id = snapshot.key;
+            const targetId = isNaN(id) ? id : Number(id);
+            await db[tableName].delete(targetId);
+        });
+    });
+};
 
+// --- HELPER LABA RUGI ---
 window.hitungLabaRugi = async (startDate, endDate) => {
     try {
-        // .between(start, end, includeStart, includeEnd)
-        // Pastikan startDate dan endDate berupa string ISO: "2023-10-01"
+        // Ambil data dalam rentang waktu tertentu
         const semuaTransaksi = await db.transactions
             .where('date').between(startDate, endDate, true, true)
             .toArray();
 
-        let stats = {
-            totalOmzet: 0,
-            totalModal: 0,
-            totalLabaBersih: 0,
-            count: semuaTransaksi.length
+        const digitalTrans = await db.digital_transactions
+            .where('date').between(startDate, endDate, true, true)
+            .toArray();
+
+        const semuaPengeluaran = await db.expenses
+            .where('date').between(startDate, endDate, true, true)
+            .toArray();
+
+        let stats = { 
+            totalOmzet: 0, 
+            totalModal: 0, 
+            totalLabaKotor: 0,
+            totalPengeluaran: 0,
+            totalLabaBersih: 0, 
+            count: semuaTransaksi.length + digitalTrans.length 
         };
 
+        // 1. Hitung Penjualan Produk (Retail)
         semuaTransaksi.forEach(tr => {
             stats.totalOmzet += Number(tr.total || 0);
-            
-            if (tr.items && Array.isArray(tr.items)) {
+            if (tr.items) {
                 tr.items.forEach(item => {
                     const qty = Number(item.qty || 0);
-                    const modalSatuan = Number(item.price_modal || 0);
-                    const jualSatuan = Number(item.price_sell || 0);
-
-                    // 1. Hitung total modal untuk transaksi ini
-                    stats.totalModal += (modalSatuan * qty);
-
-                    // 2. Hitung Laba Bersih
-                    // Jika ada item.profit (transaksi baru), pakai itu. 
-                    // Jika tidak (transaksi lama), hitung manual: (jual - modal) * qty
-                    if (typeof item.profit !== 'undefined') {
-                        stats.totalLabaBersih += Number(item.profit);
-                    } else {
-                        stats.totalLabaBersih += (jualSatuan - modalSatuan) * qty;
-                    }
+                    const modal = Number(item.price_modal || 0);
+                    const jual = Number(item.price_sell || 0);
+                    stats.totalModal += (modal * qty);
+                    stats.totalLabaKotor += (jual - modal) * qty;
                 });
             }
         });
+
+        // 2. Tambahkan Laba dari Digital (Admin Fee)
+        digitalTrans.forEach(dt => {
+            stats.totalLabaKotor += Number(dt.profit || 0);
+            stats.totalOmzet += Number(dt.adminFee || 0); 
+        });
+
+        // 3. Hitung Pengeluaran Operasional
+        semuaPengeluaran.forEach(ex => {
+            stats.totalPengeluaran += Number(ex.amount || 0);
+        });
+
+        // 4. Final: Laba Bersih = Laba Kotor - Pengeluaran
+        stats.totalLabaBersih = stats.totalLabaKotor - stats.totalPengeluaran;
 
         return stats;
     } catch (err) {
@@ -1068,21 +663,33 @@ window.hitungLabaRugi = async (startDate, endDate) => {
     }
 };
 
+// --- EKSEKUSI ---
+db.open().then(() => {
+    console.log("Database SinarPagiDB v16 Aktif (Digital Service & Cloud Sync Ready)");
+    syncFromCloud(); 
+}).catch(err => {
+    console.error("Koneksi Database Gagal:", err);
+});
 
-js/routes.js
+
+
+// js/routes.js //
 window.menuGroups = [
     { 
         title: 'Beranda', 
         items: [
             { name: 'Dashboard', icon: 'ri-dashboard-3-line' },
-            { name: 'Penjualan', icon: 'ri-calculator-line' }
+            { name: 'Penjualan', icon: 'ri-calculator-line' },
+            { name: 'Riwayat Transaksi', icon: 'ri-history-line' } // TAMBAHAN: Untuk akses edit & pantau nota
         ]
     },
     { 
         title: 'Operasional', 
         items: [
             { name: 'Stock Monitor', icon: 'ri-radar-line' },
-            { name: 'Piutang Penjualan', icon: 'ri-hand-coin-line' }
+            { name: 'Layanan Digital', icon: 'ri-smartphone-line' },
+            { name: 'Piutang Penjualan', icon: 'ri-hand-coin-line' },
+            { name: 'Pengeluaran', icon: 'ri-shopping-basket-line' } 
         ]
     },
     { 
@@ -1100,472 +707,20 @@ window.menuGroups = [
         items: [
             { name: 'Laporan Harian', icon: 'ri-calendar-event-line' },
             { name: 'Laba Rugi', icon: 'ri-funds-line' },
+            { name: 'Arus Uang', icon: 'ri-exchange-funds-line' },
             { name: 'Pengaturan', icon: 'ri-settings-5-line' }
         ]
     }
 ];
 
 
-components/pages/Dashboard.js
-// components/pages/Dashboard.js //
-const PageDashboard = {
-    setup() {
-        const stats = Vue.ref({ omzet: 0, stokKritis: 0, totalPiutang: 0 });
 
-        const loadStats = async () => {
-            const today = new Date().toISOString().split('T')[0];
-            
-            // 1. Hitung Omzet Hari Ini
-            const trans = await db.transactions.toArray();
-            const todayTrans = trans.filter(t => t.date.startsWith(today));
-            const omzet = todayTrans.reduce((sum, t) => sum + t.total, 0);
-
-            // 2. Hitung Stok Kritis (<= 5)
-            const products = await db.products.toArray();
-            const kritis = products.filter(p => p.qty <= 5).length;
-
-            // 3. Hitung Total Piutang Belum Lunas
-            const piutang = trans.filter(t => t.status === 'hutang')
-                                 .reduce((sum, t) => sum + t.total, 0);
-
-            stats.value = { omzet, stokKritis: kritis, totalPiutang: piutang };
-        };
-
-        Vue.onMounted(loadStats);
-
-        return { stats };
-    },
-    template: `
-    <div class="p-4 flex flex-col gap-4">
-        <div class="bg-blue-600 p-6 rounded-[2.5rem] text-white shadow-xl shadow-blue-100">
-            <span class="text-[10px] font-black uppercase tracking-widest opacity-70">Omzet Hari Ini</span>
-            <h2 class="text-3xl font-black mt-1">Rp {{ stats.omzet.toLocaleString('id-ID') }}</h2>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-            <div class="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm">
-                <div class="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center mb-3">
-                    <i class="ri-error-warning-line text-xl"></i>
-                </div>
-                <div class="text-[20px] font-black text-gray-800">{{ stats.stokKritis }}</div>
-                <div class="text-[9px] font-black text-gray-400 uppercase tracking-tighter">Produk Kritis</div>
-            </div>
-
-            <div class="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm">
-                <div class="w-10 h-10 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center mb-3">
-                    <i class="ri-hand-coin-line text-xl"></i>
-                </div>
-                <div class="text-[14px] font-black text-gray-800">Rp {{ stats.totalPiutang.toLocaleString('id-ID') }}</div>
-                <div class="text-[9px] font-black text-gray-400 uppercase tracking-tighter">Total Piutang</div>
-            </div>
-        </div>
-
-        <div class="bg-gray-900 p-6 rounded-[2rem] text-white flex items-center justify-between">
-            <div>
-                <div class="text-[11px] font-black uppercase tracking-widest opacity-60">Status Database</div>
-                <div class="text-[10px] font-bold text-green-400 uppercase mt-1">Sistem Terhubung & Aman</div>
-            </div>
-            <i class="ri-shield-check-fill text-3xl text-green-400"></i>
-        </div>
-    </div>
-    `
-};
-
-
-components/pages/Penjualan.js
-// components/pages/Penjualan.js
-
-const PagePenjualan = {
-    props: ['cart', 'selectedMember', 'payMethod', 'cashAmount'],
-    emits: ['update:payMethod', 'update:cashAmount', 'checkout'],
-    setup(props, { emit }) {
-        const formatRupiah = (val) => {
-            if (!val) return 'Rp 0';
-            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
-        };
-
-        const totalBelanja = Vue.computed(() => {
-            return props.cart.reduce((acc, item) => acc + (item.price_sell * item.qty), 0);
-        });
-
-        const kembalian = Vue.computed(() => {
-            const bayar = Number(props.cashAmount) || 0;
-            return Math.max(0, bayar - totalBelanja.value);
-        });
-
-        const updateQty = (id, n) => {
-            const item = props.cart.find(i => i.id === id);
-            if (item) {
-                item.qty += n;
-                if (item.qty <= 0) {
-                    const index = props.cart.indexOf(item);
-                    props.cart.splice(index, 1);
-                }
-            }
-        };
-
-        const scrollContainer = Vue.ref(null);
-        const scrollToBottom = () => {
-            Vue.nextTick(() => {
-                if (scrollContainer.value) {
-                    scrollContainer.value.scrollTo({ top: scrollContainer.value.scrollHeight, behavior: 'smooth' });
-                }
-            });
-        };
-
-        Vue.watch(() => props.cart.length, (n, o) => { if (n > o) scrollToBottom(); });
-        Vue.watch(() => props.cart, () => { scrollToBottom(); }, { deep: true });
-
-        return { formatRupiah, totalBelanja, kembalian, updateQty, scrollContainer };
-    },
-    
-    template: `
-    <div class="flex flex-col h-full relative overflow-hidden bg-white">
-        
-        <div ref="scrollContainer" 
-             :class="payMethod && payMethod !== 'null' ? 'pb-[320px]' : 'pb-[100px]'"
-             class="flex-1 overflow-y-auto px-3 no-scrollbar transition-all duration-300 ease-in-out">
-            
-            <div v-if="cart.length === 0" class="h-64 flex flex-col items-center justify-center text-gray-300">
-                <i class="ri-shopping-cart-2-line text-4xl mb-2 opacity-20"></i>
-                <p class="text-[9px] font-black uppercase tracking-widest opacity-50">Keranjang Kosong</p>
-            </div>
-
-            <div v-else class="flex flex-col gap-2 mt-3">
-                <div v-for="item in cart" :key="item.id" 
-                    class="bg-gray-50 p-2 pl-3 rounded-xl flex items-center justify-between animate-slide-up border border-gray-100 shadow-sm">
-                    
-                    <div class="flex gap-3 items-center min-w-0">
-                        <div class="w-8 h-8 bg-white text-blue-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm border border-gray-50">
-                            <i class="ri-shopping-bag-3-fill text-lg"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <div class="text-[12px] font-black text-gray-800 truncate uppercase leading-tight">{{ item.name }}</div>
-                            <div class="text-[10px] font-bold text-blue-600 leading-tight">{{ formatRupiah(item.price_sell) }}</div>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center gap-1 bg-white rounded-lg p-0.5 border border-gray-100 shadow-sm">
-                        <button @click="updateQty(item.id, -1)" 
-                            class="w-7 h-7 flex items-center justify-center rounded-md text-red-600 font-black border-none bg-transparent active:bg-red-50">-</button>
-                        <span class="text-[11px] font-black text-gray-700 min-w-[18px] text-center">{{ item.qty }}</span>
-                        <button @click="updateQty(item.id, 1)" 
-                            class="w-7 h-7 flex items-center justify-center rounded-md text-blue-600 font-black border-none bg-transparent active:bg-blue-50">+</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 z-50">
-            
-            <div v-if="payMethod === 'cash'" class="mb-3 animate-slide-up">
-                <div class="bg-blue-600 p-4 rounded-[1.5rem] shadow-xl shadow-blue-100 border border-blue-500">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="flex-1">
-                            <label class="text-[8px] text-blue-200 font-black uppercase block mb-1">Nominal Tunai</label>
-                            <div class="flex items-baseline gap-1">
-                                <span class="text-blue-200 text-xs font-bold">Rp</span>
-                                <input type="number" inputmode="numeric" :value="cashAmount" 
-                                    @input="$emit('update:cashAmount', $event.target.value)"
-                                    class="w-full bg-transparent border-none text-white text-2xl font-black outline-none p-0 m-0 leading-none"
-                                    placeholder="0">
-                            </div>
-                        </div>
-                        <div class="text-right border-l border-white/20 pl-3">
-                            <div class="text-[8px] text-blue-200 font-black uppercase mb-1">Kembali</div>
-                            <div class="text-sm text-white font-black">{{ formatRupiah(kembalian).replace('Rp', '').trim() }}</div>
-                        </div>
-                    </div>
-                    <button @click="(!cashAmount || cashAmount == 0) ? $emit('update:cashAmount', totalBelanja) : $emit('checkout')"
-                        class="w-full border-none py-3 rounded-xl bg-white text-blue-600 font-black uppercase text-[10px] tracking-widest shadow-lg">
-                        {{ (!cashAmount || cashAmount == 0) ? 'UANG PAS' : (Number(cashAmount) < totalBelanja ? 'UANG KURANG' : 'PROSES SEKARANG') }}
-                    </button>
-                </div>
-            </div>
-
-            <div class="flex flex-col gap-2">
-                <div class="flex items-center justify-between px-1 mb-1">
-                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Total Belanja</span>
-                    <span class="text-lg font-black text-gray-800">{{ formatRupiah(totalBelanja) }}</span>
-                </div>
-                
-                <div class="flex gap-2 bg-gray-100 p-1 rounded-2xl border border-gray-200">
-                    <button v-for="m in ['cash', 'qris', 'tempo']" 
-                        @click="$emit('update:payMethod', payMethod === m ? 'null' : m)"
-                        :class="payMethod === m ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400'"
-                        class="flex-1 py-2.5 rounded-xl border-none text-[10px] font-black uppercase transition-all">
-                        {{ m }}
-                    </button>
-                </div>
-
-                <div v-if="payMethod === 'qris' || payMethod === 'tempo'" class="mt-1">
-                    <button @click="$emit('checkout')"
-                        class="w-full border-none py-4 rounded-[1.5rem] bg-gray-900 text-white font-black text-[10px] uppercase tracking-widest animate-slide-up shadow-xl">
-                        PROSES {{ payMethod.toUpperCase() }}
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    `
-};
-
-
-components/pages/StockMonitor.js
-window.PageStockMonitor = {
-    setup() {
-        const products = Vue.ref([]);
-        const filterStatus = Vue.ref('all');
-
-        const loadStock = async () => {
-            const allProducts = await db.products.toArray();
-            // Urutkan berdasarkan stok paling sedikit
-            products.value = allProducts.sort((a, b) => a.qty - b.qty);
-        };
-
-        const filteredProducts = Vue.computed(() => {
-            if (filterStatus.value === 'kritis') return products.value.filter(p => p.qty <= 5);
-            if (filterStatus.value === 'menipis') return products.value.filter(p => p.qty > 5 && p.qty <= 15);
-            return products.value;
-        });
-
-        const getStockTheme = (qty) => {
-            if (qty <= 5) return 'bg-rose-50 text-rose-500 border-rose-100';
-            if (qty <= 15) return 'bg-orange-50 text-orange-400 border-orange-100';
-            return 'bg-blue-50 text-blue-400 border-blue-100';
-        };
-
-        const getStatusLabel = (qty) => {
-            if (qty <= 5) return 'Kritis';
-            if (qty <= 15) return 'Menipis';
-            return 'Aman';
-        };
-
-        Vue.onMounted(loadStock);
-
-        return { filteredProducts, filterStatus, getStockTheme, getStatusLabel, loadStock };
-    },
-    template: `
-    <div class="p-6 space-y-6 pb-24 bg-white min-h-full">
-        
-        <div class="flex p-1 bg-slate-50 rounded-2xl border border-slate-100">
-            <button @click="filterStatus = 'all'"
-                :class="filterStatus === 'all' ? 'bg-blue-500 text-white shadow-md' : 'text-slate-400 bg-transparent'"
-                class="flex-1 py-2 rounded-xl border-none text-[10px] font-black uppercase tracking-widest transition-all">
-                All
-            </button>
-            <button @click="filterStatus = 'kritis'"
-                :class="filterStatus === 'kritis' ? 'text-blue-500 font-black' : 'text-slate-400 bg-transparent'"
-                class="flex-1 py-2 rounded-xl border-none text-[10px] uppercase tracking-widest transition-all">
-                Kritis
-            </button>
-            <button @click="filterStatus = 'menipis'"
-                :class="filterStatus === 'menipis' ? 'text-blue-500 font-black' : 'text-slate-400 bg-transparent'"
-                class="flex-1 py-2 rounded-xl border-none text-[10px] uppercase tracking-widest transition-all">
-                Menipis
-            </button>
-        </div>
-
-        <div class="flex flex-col gap-4">
-            <div v-for="p in filteredProducts" :key="p.id" 
-                class="bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between">
-                
-                <div class="flex items-center gap-4">
-                    <div :class="getStockTheme(p.qty)" 
-                         class="w-14 h-14 rounded-[1.5rem] flex flex-col items-center justify-center border transition-all">
-                        <span class="text-lg font-black leading-none">{{ p.qty }}</span>
-                        <span class="text-[7px] font-bold uppercase opacity-60">{{ p.unit || 'pcs' }}</span>
-                    </div>
-                    
-                    <div>
-                        <div class="text-[13px] font-black text-slate-700 uppercase leading-tight tracking-tight">{{ p.name }}</div>
-                        <div class="flex items-center gap-2 mt-1.5">
-                            <span class="text-[8px] text-slate-400 font-black uppercase tracking-widest">{{ p.category }}</span>
-                            <span class="w-1 h-1 rounded-full bg-slate-200"></span>
-                            <span :class="getStockTheme(p.qty).split(' ')[1]" class="text-[8px] font-black uppercase tracking-widest">
-                                {{ getStatusLabel(p.qty) }}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <button @click="loadStock" class="w-9 h-9 bg-slate-50 text-slate-300 rounded-full border-none flex items-center justify-center">
-                    <i class="ri-refresh-line text-lg"></i>
-                </button>
-            </div>
-
-            <div v-if="filteredProducts.length === 0" class="py-20 text-center opacity-30">
-                <i class="ri-check-double-line text-4xl"></i>
-                <p class="text-[10px] font-black uppercase mt-2 tracking-widest">Stok Aman</p>
-            </div>
-        </div>
-    </div>
-    `
-};
-
-
-components/pages/PiutangPenjualan.js
-const PagePiutangPenjualan = {
-    setup() {
-        const piutangList = Vue.ref([]);
-        const showModal = Vue.ref(false);
-        const selectedTrans = Vue.ref(null);
-        const inputCicilan = Vue.ref(null);
-
-        const loadPiutang = async () => {
-            const allTransactions = await db.transactions.toArray();
-            const members = await db.members.toArray();
-            
-            piutangList.value = allTransactions
-                .filter(t => t.status === 'hutang')
-                .map(t => {
-                    const member = members.find(m => m.id === t.memberId);
-                    // Hitung sisa hutang
-                    const sisa = t.total - (t.amountPaid || 0);
-                    return {
-                        ...t,
-                        memberName: member ? member.name : 'Umum/Tanpa Nama',
-                        sisaHutang: sisa
-                    };
-                }).reverse();
-        };
-
-        const openModal = (trans) => {
-            selectedTrans.value = trans;
-            inputCicilan.value = trans.sisaHutang; // Default isi sisa hutang
-            showModal.value = true;
-        };
-
-        const prosesCicilan = async () => {
-            if (!inputCicilan.value || inputCicilan.value <= 0) return;
-            
-            const trans = selectedTrans.value;
-            const nominal = Number(inputCicilan.value);
-            
-            // Riwayat cicilan baru
-            const newPayment = {
-                date: new Date().toISOString(),
-                amount: nominal
-            };
-
-            const updatedPayments = trans.payments ? [...trans.payments, newPayment] : [newPayment];
-            const totalSudahBayar = (trans.amountPaid || 0) + nominal;
-            const statusBaru = totalSudahBayar >= trans.total ? 'lunas' : 'hutang';
-
-            try {
-                await db.transactions.update(trans.id, {
-                    amountPaid: totalSudahBayar,
-                    payments: updatedPayments,
-                    status: statusBaru
-                });
-
-                alert(statusBaru === 'lunas' ? "Piutang Lunas!" : "Cicilan Berhasil Dicatat");
-                showModal.value = false;
-                loadPiutang();
-            } catch (err) {
-                alert("Gagal mencatat cicilan");
-            }
-        };
-
-        const formatRupiah = (val) => "Rp " + (val || 0).toLocaleString('id-ID');
-
-        Vue.onMounted(loadPiutang);
-
-        return { 
-            piutangList, formatRupiah, openModal, 
-            showModal, selectedTrans, inputCicilan, prosesCicilan 
-        };
-    },
-    template: `
-    <div class="p-4 flex flex-col gap-4">
-        <div class="px-1">
-            <h3 class="text-lg font-black text-gray-800 uppercase tracking-tight">Piutang Penjualan</h3>
-            <p class="text-[10px] text-gray-400 font-bold uppercase">Manajemen Cicilan & Pelunasan</p>
-        </div>
-
-        <div class="grid gap-3">
-            <div v-for="p in piutangList" :key="p.id" class="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden">
-                <div class="absolute top-0 left-0 h-1 bg-orange-400" :style="{ width: (p.amountPaid / p.total * 100) + '%' }"></div>
-
-                <div class="flex justify-between items-start mb-3">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center">
-                            <i class="ri-history-line text-xl"></i>
-                        </div>
-                        <div>
-                            <div class="text-[12px] font-black text-gray-800 uppercase leading-tight">{{ p.memberName }}</div>
-                            <div class="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">
-                                #{{ p.id }} • {{ new Date(p.date).toLocaleDateString('id-ID') }}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-[10px] font-bold text-gray-400 uppercase">Sisa</div>
-                        <div class="text-sm font-black text-red-600">{{ formatRupiah(p.sisaHutang) }}</div>
-                    </div>
-                </div>
-
-                <div class="flex gap-2 mb-3 bg-gray-50 p-2 rounded-xl text-[10px]">
-                    <div class="flex-1 text-center border-r border-gray-200">
-                        <span class="block text-gray-400 uppercase font-bold">Total Nota</span>
-                        <span class="font-black text-gray-700">{{ formatRupiah(p.total) }}</span>
-                    </div>
-                    <div class="flex-1 text-center">
-                        <span class="block text-gray-400 uppercase font-bold">Masuk</span>
-                        <span class="font-black text-green-600">{{ formatRupiah(p.amountPaid) }}</span>
-                    </div>
-                </div>
-
-                <button @click="openModal(p)" class="w-full py-3 bg-blue-600 text-white rounded-xl border-none font-black text-[10px] uppercase tracking-widest shadow-md active:scale-95 transition-all">
-                    CATAT CICILAN / LUNAS
-                </button>
-            </div>
-
-            <div v-if="piutangList.length === 0" class="py-20 text-center opacity-30 flex flex-col items-center">
-                <i class="ri-checkbox-circle-line text-4xl text-gray-400 mb-2"></i>
-                <p class="text-[10px] font-black uppercase">Semua Piutang Lunas</p>
-            </div>
-        </div>
-
-        <div v-if="showModal" class="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-6 shadow-2xl animate-zoom-in">
-                <div class="text-center mb-6">
-                    <h4 class="text-lg font-black text-gray-800 uppercase">Bayar Cicilan</h4>
-                    <p class="text-[10px] text-gray-400 font-bold uppercase">{{ selectedTrans.memberName }} • Nota #{{ selectedTrans.id }}</p>
-                </div>
-
-                <div class="mb-6">
-                    <label class="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Nominal Pembayaran</label>
-                    <input type="number" v-model="inputCicilan" 
-                           class="w-full p-4 bg-gray-50 border-none rounded-2xl text-lg font-black text-blue-600 focus:ring-2 focus:ring-blue-500 outline-none">
-                    <div class="mt-2 text-[10px] text-right text-gray-400 font-bold">
-                        Sisa Piutang: {{ formatRupiah(selectedTrans.sisaHutang) }}
-                    </div>
-                </div>
-
-                <div class="flex gap-3">
-                    <button @click="showModal = false" class="flex-1 py-4 bg-gray-100 text-gray-500 rounded-2xl font-black text-[10px] uppercase border-none">Batal</button>
-                    <button @click="prosesCicilan" class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase border-none shadow-lg shadow-blue-200">Simpan</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    `
-};
-
-
-components/pages/DaftarProduk.js
 // components/pages/DaftarProduk.js //
-// v1.4 - UI Slim & Stock Highlight //
+// v1.6 - Added Cloud Sync & Pack Info //
 
 const PageDaftarProduk = {
-    // Memastikan komponen global dikenali di dalam halaman ini
-    components: {
-        'global-search': GlobalSearchComponent
-    },
     setup() {
         const products = Vue.ref([]);
-        const searchQuery = Vue.ref("");
         const selectedCategory = Vue.ref("Semua");
         const listCategories = Vue.ref([]);
         
@@ -1606,33 +761,51 @@ const PageDaftarProduk = {
             isEditModalOpen.value = true;
         };
 
+        // REVISI: Update Lokal + Cloud (Firebase)
         const updateProduct = async () => {
             try {
+                // 1. Update ke database lokal (Dexie)
                 await db.products.update(editingProduct.value.id, editingProduct.value);
+                
+                // 2. Update ke Firebase Realtime Database
+                if (typeof fdb !== 'undefined') {
+                    await fdb.ref('products/' + editingProduct.value.id).update({
+                        ...editingProduct.value,
+                        updatedAt: new Date().toISOString()
+                    });
+                }
+
                 isEditModalOpen.value = false;
                 await loadData();
-                alert("Produk berhasil diperbarui!");
+                alert("Produk berhasil diperbarui di Cloud!");
             } catch (err) {
-                alert("Gagal memperbarui produk");
+                console.error("Update Error:", err);
+                alert("Gagal memperbarui produk: " + err.message);
             }
         };
 
+        // REVISI: Hapus Lokal + Cloud (Firebase)
         const deleteProduct = async (id) => {
-            if (confirm("Hapus produk ini secara permanen?")) {
-                await db.products.delete(id);
-                await loadData();
+            if (confirm("Hapus produk ini secara permanen dari Cloud?")) {
+                try {
+                    // Hapus Lokal
+                    await db.products.delete(id);
+                    // Hapus Cloud
+                    if (typeof fdb !== 'undefined') {
+                        await fdb.ref('products/' + id).remove();
+                    }
+                    await loadData();
+                    alert("Produk dihapus!");
+                } catch (err) {
+                    alert("Gagal menghapus produk");
+                }
             }
         };
 
         const filteredProducts = Vue.computed(() => {
             return products.value.filter(p => {
-                const name = p.name ? p.name.toLowerCase() : "";
-                const code = p.code ? p.code.toLowerCase() : "";
-                const query = searchQuery.value.toLowerCase();
-                
-                const matchSearch = name.includes(query) || code.includes(query);
                 const matchCategory = selectedCategory.value === "Semua" || p.category === selectedCategory.value;
-                return matchSearch && matchCategory;
+                return matchCategory;
             });
         });
 
@@ -1641,7 +814,7 @@ const PageDaftarProduk = {
         Vue.onMounted(loadData);
 
         return { 
-            searchQuery, selectedCategory, listCategories, filteredProducts, 
+            selectedCategory, listCategories, filteredProducts, 
             deleteProduct, formatRupiah, isEditModalOpen, editingProduct, 
             openEdit, updateProduct, displayModal, displaySell, updateNumber 
         };
@@ -1650,44 +823,41 @@ const PageDaftarProduk = {
     template: `
         <div class="flex flex-col gap-3 pb-28">
             
-            <div class="sticky top-0 z-40 bg-[#f1f5f9]/95 backdrop-blur-md pt-2 pb-3 -mx-4 px-4 border-b border-gray-100">
-                <div class="flex flex-col gap-3">
-                    <global-search 
-                        v-model="searchQuery" 
-                        placeholder="Cari nama atau barcode...">
-                    </global-search>
-
-                    <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
-                        <button @click="selectedCategory = 'Semua'" 
-                            :class="selectedCategory === 'Semua' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-400'"
-                            class="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase border-none transition-all whitespace-nowrap active:scale-95">
-                            Semua
-                        </button>
-                        <button v-for="c in listCategories" :key="c.id" @click="selectedCategory = c.name" 
-                            :class="selectedCategory === c.name ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-400'"
-                            class="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase border-none transition-all whitespace-nowrap active:scale-95">
-                            {{c.name}}
-                        </button>
-                    </div>
+            <div class="sticky top-0 z-40 bg-white/95 backdrop-blur-md pt-2 pb-3 -mx-4 px-4 border-b border-gray-100">
+                <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                    <button @click="selectedCategory = 'Semua'" 
+                        :class="selectedCategory === 'Semua' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-50 text-gray-400'"
+                        class="px-5 py-2 rounded-full text-[10px] font-black uppercase border-none transition-all whitespace-nowrap active:scale-95">
+                        Semua
+                    </button>
+                    <button v-for="c in listCategories" :key="c.id" @click="selectedCategory = c.name" 
+                        :class="selectedCategory === c.name ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-50 text-gray-400'"
+                        class="px-5 py-2 rounded-full text-[10px] font-black uppercase border-none transition-all whitespace-nowrap active:scale-95">
+                        {{c.name}}
+                    </button>
                 </div>
             </div>
 
             <div class="flex flex-col gap-2">
                 <div v-for="p in filteredProducts" :key="p.id" 
-                    class="bg-white p-2.5 rounded-2xl border border-gray-50 shadow-sm flex items-center gap-3 active:bg-gray-50 transition-all">
+                    class="bg-white p-3 rounded-3xl border border-gray-50 shadow-sm flex items-center gap-3 active:bg-gray-50 transition-all">
                     
-                    <div class="w-12 h-12 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center border border-gray-100">
+                    <div class="w-12 h-12 bg-blue-50 rounded-2xl overflow-hidden flex-shrink-0 flex items-center justify-center">
                         <img v-if="p.image" :src="p.image" class="w-full h-full object-cover">
-                        <i v-else class="ri-image-line text-gray-300 text-xl"></i>
+                        <i v-else class="ri-shopping-bag-3-fill text-blue-300 text-xl"></i>
                     </div>
 
                     <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-1.5 mb-0.5">
-                            <span class="text-[8px] font-black text-blue-500 uppercase px-1.5 py-0.5 bg-blue-50 rounded-md">{{ p.category }}</span>
+                        <div class="text-[13px] font-black text-gray-800 truncate leading-tight uppercase">{{ p.name }}</div>
+                        
+                        <div v-if="p.pack_price" class="flex items-center gap-1 mt-0.5">
+                            <span class="text-[9px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded">
+                                Beli: Rp{{ p.pack_price.toLocaleString() }} /{{ p.pack_size }}pcs
+                            </span>
                         </div>
-                        <div class="text-[13px] font-bold text-gray-800 truncate leading-tight">{{ p.name }}</div>
+
                         <div class="flex items-center gap-2 mt-1">
-                            <span class="text-[12px] font-black text-green-600">{{ formatRupiah(p.price_sell) }}</span>
+                            <span class="text-[11px] font-black text-blue-600">{{ formatRupiah(p.price_sell) }}</span>
                             <span class="text-[10px] text-gray-300 font-medium">|</span>
                             <span class="text-[10px] font-bold" :class="p.qty <= 5 ? 'text-red-500' : 'text-gray-400'">
                                 Stok: {{ p.qty }} <small class="font-normal">{{ p.unit }}</small>
@@ -1696,22 +866,22 @@ const PageDaftarProduk = {
                     </div>
 
                     <div class="flex gap-1.5">
-                        <button @click="openEdit(p)" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 border-none flex items-center justify-center active:scale-90 transition-all">
-                            <i class="ri-edit-line text-base"></i>
+                        <button @click="openEdit(p)" class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 border-none flex items-center justify-center active:scale-90 transition-all">
+                            <i class="ri-edit-line text-lg"></i>
                         </button>
-                        <button @click="deleteProduct(p.id)" class="w-8 h-8 rounded-lg bg-red-50 text-red-400 border-none flex items-center justify-center active:scale-90 transition-all">
-                            <i class="ri-delete-bin-line text-base"></i>
+                        <button @click="deleteProduct(p.id)" class="w-9 h-9 rounded-xl bg-red-50 text-red-400 border-none flex items-center justify-center active:scale-90 transition-all">
+                            <i class="ri-delete-bin-line text-lg"></i>
                         </button>
                     </div>
                 </div>
 
                 <div v-if="filteredProducts.length === 0" class="py-20 text-center opacity-60">
-                    <i class="ri-search-eye-line text-4xl text-gray-200"></i>
-                    <p class="text-gray-400 text-xs mt-2 font-bold uppercase tracking-widest">Produk tidak ditemukan</p>
+                    <i class="ri-archive-line text-4xl text-gray-200"></i>
+                    <p class="text-gray-400 text-[10px] mt-2 font-black uppercase tracking-widest">Belum ada produk di kategori ini</p>
                 </div>
             </div>
 
-            <div v-if="isEditModalOpen" class="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 backdrop-blur-sm animate-fade-in" @click.self="isEditModalOpen = false">
+            <div v-if="isEditModalOpen" class="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 backdrop-blur-sm" @click.self="isEditModalOpen = false">
                 <div class="bg-white w-full max-w-md rounded-t-[32px] p-6 shadow-2xl animate-slide-up">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-lg font-black text-gray-800 uppercase tracking-tight">Edit Produk</h3>
@@ -1722,30 +892,30 @@ const PageDaftarProduk = {
                     <div class="flex flex-col gap-4 overflow-y-auto max-h-[60vh] pb-4 no-scrollbar">
                         <div class="form-group">
                             <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Nama Produk</label>
-                            <input v-model="editingProduct.name" type="text" class="form-control !rounded-2xl bg-gray-50 border-none py-3">
+                            <input v-model="editingProduct.name" type="text" class="form-control !rounded-2xl bg-gray-50 border-none py-3 font-bold">
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div class="form-group">
                                 <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Harga Modal</label>
-                                <input :value="displayModal" @input="updateNumber('price_modal', $event)" type="text" inputmode="numeric" class="form-control font-bold text-red-500 bg-red-50/50 border-none !rounded-2xl py-3 text-center">
+                                <input :value="displayModal" @input="updateNumber('price_modal', $event)" type="text" inputmode="numeric" class="form-control font-black text-red-500 bg-red-50/50 border-none !rounded-2xl py-3 text-center">
                             </div>
                             <div class="form-group">
                                 <label class="text-[10px] font-black text-green-500 uppercase mb-1 block ml-1 tracking-widest">Harga Jual</label>
-                                <input :value="displaySell" @input="updateNumber('price_sell', $event)" type="text" inputmode="numeric" class="form-control font-bold text-green-600 bg-green-50/50 border-none !rounded-2xl py-3 text-center">
+                                <input :value="displaySell" @input="updateNumber('price_sell', $event)" type="text" inputmode="numeric" class="form-control font-black text-green-600 bg-green-50/50 border-none !rounded-2xl py-3 text-center">
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div class="form-group">
                                 <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Stok</label>
-                                <input v-model.number="editingProduct.qty" type="number" class="form-control !rounded-2xl bg-gray-50 border-none py-3 text-center">
+                                <input v-model.number="editingProduct.qty" type="number" class="form-control !rounded-2xl bg-gray-50 border-none py-3 text-center font-bold">
                             </div>
                             <div class="form-group">
                                 <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Satuan</label>
-                                <input v-model="editingProduct.unit" type="text" class="form-control !rounded-2xl bg-gray-50 border-none py-3 text-center">
+                                <input v-model="editingProduct.unit" type="text" class="form-control !rounded-2xl bg-gray-50 border-none py-3 text-center font-bold">
                             </div>
                         </div>
                     </div>
-                    <button @click="updateProduct" class="w-full bg-blue-600 text-white py-4 rounded-[20px] font-black mt-4 uppercase tracking-[0.2em] shadow-lg shadow-blue-200 active:scale-95 transition-all">
+                    <button @click="updateProduct" class="w-full bg-blue-600 text-white py-4 rounded-[20px] font-black mt-4 uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all">
                         Simpan Perubahan
                     </button>
                 </div>
@@ -1753,807 +923,3 @@ const PageDaftarProduk = {
         </div>
     `
 };
-
-
-components/pages/TambahProduk.js
-// comoponents/pages/TambahProduk.js //
-
-const PageTambahProduk = {
-    setup() {
-        const product = Vue.ref({
-            image: null, name: '', code: '', category: 'Umum', unit: 'pcs', price_modal: 0, price_sell: 0, qty: 0
-        });
-
-        const displayModal = Vue.ref("");
-        const displaySell = Vue.ref("");
-        const listCategories = Vue.ref([]);
-
-        const loadCategories = async () => {
-            const data = await db.categories.toArray();
-            listCategories.value = data;
-        };
-
-        const formatDisplay = (val) => {
-            if (!val) return "";
-            return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        };
-
-        const updateNumber = (field, event) => {
-            let rawValue = event.target.value.replace(/\D/g, "");
-            let numValue = parseInt(rawValue) || 0;
-            product.value[field] = numValue;
-            if (field === 'price_modal') displayModal.value = formatDisplay(numValue);
-            if (field === 'price_sell') displaySell.value = formatDisplay(numValue);
-        };
-
-        // FUNGSI FOTO YANG LENGKAP
-        const takePhoto = () => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            input.capture = 'environment';
-            input.onchange = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const size = 400; 
-                        canvas.width = size;
-                        canvas.height = size;
-                        const ctx = canvas.getContext('2d');
-                        const min = Math.min(img.width, img.height);
-                        const sx = (img.width - min) / 2;
-                        const sy = (img.height - min) / 2;
-                        ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
-                        product.value.image = canvas.toDataURL('image/jpeg', 0.7);
-                    };
-                };
-            };
-            input.click();
-        };
-
-        const saveProduct = async () => {
-            if(!product.value.name || !product.value.price_sell) {
-                alert("Nama dan Harga Jual wajib diisi!");
-                return;
-            }
-            try {
-                await db.products.add(JSON.parse(JSON.stringify(product.value)));
-                alert("Produk Berhasil Disimpan!");
-                product.value = { image: null, name: '', code: '', category: 'Umum', unit: 'pcs', price_modal: 0, price_sell: 0, qty: 0 };
-                displayModal.value = ""; displaySell.value = "";
-            } catch (err) { alert("Gagal menyimpan"); }
-        };
-
-        Vue.onMounted(loadCategories);
-
-        return { product, takePhoto, saveProduct, displayModal, displaySell, updateNumber, listCategories };
-    },
-    template: `
-        <div class="flex flex-col gap-3 pb-24">
-            <div class="p-5 bg-white rounded-3xl shadow-sm border border-gray-100 flex flex-col gap-3">
-                
-                <div class="flex flex-col items-center mb-2">
-                    <div @click="takePhoto" class="w-40 h-40 bg-gray-50 rounded-3xl flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-200 relative">
-                        <img v-if="product.image" :src="product.image" class="w-full h-full object-cover">
-                        <div v-else class="text-center text-gray-400 p-4">
-                            <i class="ri-camera-lens-line text-4xl"></i>
-                            <span class="block text-[10px] mt-2 uppercase font-black">Foto Produk</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Nama Produk</label>
-                    <input v-model="product.name" type="text" class="form-control" placeholder="Contoh: Indomie Goreng">
-                </div>
-
-                <div class="form-group">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Kode / Barcode</label>
-                    <div class="flex items-stretch gap-2 h-12"> 
-                        <input v-model="product.code" type="text" class="form-control flex-1 !m-0" placeholder="Scan atau manual...">
-                        <button class="bg-blue-50 text-blue-600 border-none px-4 rounded-xl flex items-center justify-center active:bg-blue-100">
-                            <i class="ri-qr-scan-2-line text-xl"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Kategori</label>
-                    <select v-model="product.category" class="form-control">
-                        <option value="Umum">Umum</option>
-                        <option v-for="cat in listCategories" :key="cat.id" :value="cat.name">{{ cat.name }}</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Satuan</label>
-                    <select v-model="product.unit" class="form-control">
-                        <option value="pcs">pcs</option>
-                        <option value="bks">bks</option>
-                        <option value="btg">btg</option>
-                        <option value="rtg">rtg</option>
-                    </select>
-                </div>
-
-                <hr class="border-gray-50 my-1">
-
-                <div class="form-group">
-                    <label class="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1 block">Harga Modal</label>
-                    <input :value="displayModal" @input="updateNumber('price_modal', $event)" type="text" inputmode="numeric" class="form-control font-bold text-red-600 bg-red-50/20" placeholder="0">
-                </div>
-
-                <div class="form-group">
-                    <label class="text-[10px] font-black text-green-500 uppercase tracking-widest mb-1 block">Harga Jual</label>
-                    <input :value="displaySell" @input="updateNumber('price_sell', $event)" type="text" inputmode="numeric" class="form-control font-bold text-green-600 bg-green-50/20" placeholder="0">
-                </div>
-
-                <div class="form-group">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Stok Awal</label>
-                    <input v-model.number="product.qty" type="number" class="form-control font-bold" placeholder="0">
-                </div>
-
-                <button @click="saveProduct" class="w-full mt-4 bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg uppercase active:scale-95 transition-all">
-                    Simpan Produk
-                </button>
-            </div>
-        </div>
-    `
-};
-
-components/pages/KategoriProduk.js
-// components/pages/KategoriProduk.js //
-
-const PageKategoriProduk = {
-    setup() {
-        const categoryName = Vue.ref('');
-        const listCategories = Vue.ref([]);
-
-        const loadCategories = async () => {
-            try {
-                // Pastikan db sudah terdefinisi dari database.js
-                listCategories.value = await db.categories.toArray();
-            } catch (err) {
-                console.error("Gagal memuat kategori:", err);
-            }
-        };
-
-        const addCategory = async () => {
-            if (!categoryName.value.trim()) {
-                alert("Nama kategori tidak boleh kosong!");
-                return;
-            }
-            try {
-                await db.categories.add({ 
-                    name: categoryName.value.trim() 
-                });
-                categoryName.value = ''; 
-                await loadCategories(); 
-            } catch (err) {
-                alert("Gagal menyimpan kategori");
-            }
-        };
-
-        const deleteCategory = async (id) => {
-            if (confirm("Hapus kategori ini?")) {
-                await db.categories.delete(id);
-                await loadCategories();
-            }
-        };
-
-        Vue.onMounted(loadCategories);
-
-        return { categoryName, listCategories, addCategory, deleteCategory };
-    },
-    template: `
-        <div class="flex flex-col gap-4 pb-24">
-            <div class="p-5 bg-white rounded-3xl shadow-sm border border-gray-100 flex flex-col gap-3">
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Input Kategori Baru</label>
-                <div class="flex items-stretch gap-2 h-12">
-                    <input 
-                        v-model="categoryName" 
-                        @keyup.enter="addCategory"
-                        type="text" 
-                        class="form-control flex-1 !m-0" 
-                        placeholder="Contoh: Snack, Minuman, Sabun...">
-                    
-                    <button 
-                        @click="addCategory" 
-                        class="bg-blue-600 text-white border-none px-6 rounded-xl flex items-center justify-center active:scale-95 shadow-lg shadow-blue-100">
-                        <i class="ri-add-fill text-2xl"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="flex flex-col gap-2">
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2 block">Daftar Kategori Terdaftar</label>
-                
-                <div v-for="cat in listCategories" :key="cat.id" 
-                    class="p-4 bg-white rounded-2xl border border-gray-50 flex justify-between items-center shadow-sm mb-1">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
-                            <i class="ri-price-tag-3-fill"></i>
-                        </div>
-                        <span class="font-bold text-gray-700 uppercase text-xs tracking-tight">{{ cat.name }}</span>
-                    </div>
-                    
-                    <button 
-                        @click="deleteCategory(cat.id)" 
-                        class="w-10 h-10 flex items-center justify-center text-red-400 bg-red-50 rounded-xl border-none active:bg-red-100">
-                        <i class="ri-delete-bin-7-line text-lg"></i>
-                    </button>
-                </div>
-
-                <div v-if="listCategories.length === 0" class="flex flex-col items-center justify-center py-16 text-gray-300">
-                    <i class="ri-inbox-archive-line text-5xl mb-2"></i>
-                    <p class="text-xs italic uppercase font-bold tracking-tighter">Belum ada data kategori</p>
-                </div>
-            </div>
-        </div>
-    `
-};
-
-components/pages/DataMember.js
-// components/pages/DataMember.js
-const PageDataMember = {
-    setup() {
-        const members = Vue.ref([]);
-        const showModal = Vue.ref(false);
-        const newMember = Vue.ref({ id: '', name: '', address: '' });
-
-        const loadMembers = async () => {
-            members.value = await db.members.toArray();
-        };
-
-        const saveMember = async () => {
-            if (!newMember.value.name || !newMember.value.id) {
-                return alert("ID Member dan Nama wajib diisi!");
-            }
-            
-            try {
-                const existing = await db.members.get(newMember.value.id);
-                if (existing) return alert("ID Member sudah terdaftar!");
-
-                await db.members.add({ 
-                    id: newMember.value.id,
-                    name: newMember.value.name,
-                    address: newMember.value.address || '-'
-                });
-                
-                newMember.value = { id: '', name: '', address: '' };
-                showModal.value = false;
-                loadMembers();
-            } catch (err) {
-                console.error("Gagal simpan member:", err);
-                alert("Gagal menyimpan data.");
-            }
-        };
-
-        const deleteMember = async (id) => {
-            if (confirm(`Hapus pelanggan ID ${id}?`)) {
-                await db.members.delete(id);
-                loadMembers();
-            }
-        };
-
-        Vue.onMounted(loadMembers);
-
-        return { members, showModal, newMember, saveMember, deleteMember };
-    },
-    template: `
-        <div class="flex flex-col gap-4 pb-24">
-            <div class="flex justify-between items-center px-1">
-                <h3 class="text-lg font-black text-gray-800 uppercase tracking-tight">Data Member</h3>
-                <button @click="showModal = true" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black border-none shadow-md active:scale-95 transition-all">
-                    + TAMBAH BARU
-                </button>
-            </div>
-
-            <div class="grid gap-3">
-                <div v-for="m in members" :key="m.id" class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center border border-blue-100 shadow-sm">
-                        <i class="ri-user-heart-line text-xl"></i>
-                    </div>
-                    
-                    <div class="flex-1 min-w-0">
-                        <div class="text-[15px] font-black text-gray-800 truncate leading-tight">{{ m.name }}</div>
-                        
-                        <div class="flex items-center gap-2 mt-0.5">
-                            <span class="bg-gray-100 text-gray-500 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter border border-gray-200">
-                                ID: {{ m.id }}
-                            </span>
-                            <span class="text-[10px] text-gray-400 font-bold truncate opacity-70">
-                               {{ m.address }}
-                            </span>
-                        </div>
-                    </div>
-
-                    <button @click="deleteMember(m.id)" class="text-gray-300 border-none bg-transparent hover:text-red-500 p-2">
-                        <i class="ri-delete-bin-line text-lg"></i>
-                    </button>
-                </div>
-
-                <div v-if="members.length === 0" class="py-20 text-center opacity-30 flex flex-col items-center">
-                    <i class="ri-contacts-line text-5xl mb-2 text-gray-400"></i>
-                    <p class="text-[10px] font-black uppercase tracking-[0.2em]">Daftar Member Kosong</p>
-                </div>
-            </div>
-
-            <div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm">
-                <div class="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl animate-slide-up">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-lg font-black text-gray-800 uppercase tracking-tight">Form Input</h3>
-                        <button @click="showModal = false" class="bg-gray-100 border-none w-8 h-8 rounded-full flex items-center justify-center text-gray-400">
-                            <i class="ri-close-line"></i>
-                        </button>
-                    </div>
-                    
-                    <div class="flex flex-col gap-4">
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-black text-gray-400 ml-2 uppercase">1. Nama Pelanggan</label>
-                            <input v-model="newMember.name" type="text" placeholder="..." class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold shadow-inner">
-                        </div>
-
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-black text-gray-400 ml-2 uppercase">2. ID Member (Kunci)</label>
-                            <input v-model="newMember.id" type="text" placeholder="..." class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold shadow-inner uppercase">
-                        </div>
-
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-black text-gray-400 ml-2 uppercase">3. Alamat (Opsional)</label>
-                            <textarea v-model="newMember.address" placeholder="..." class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold shadow-inner" rows="2"></textarea>
-                        </div>
-                        
-                        <button @click="saveMember" class="w-full py-4 bg-blue-600 text-white rounded-2xl border-none font-black text-xs uppercase shadow-lg active:scale-95 transition-all mt-2 tracking-widest">
-                            SIMPAN DATA
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `
-};
-
-
-components/pages/LaporanHarian.js
-// components/pages/LaporanHarian.js //
-const PageLaporanHarian = {
-    setup() {
-        const summary = Vue.ref({
-            totalOmzet: 0,
-            totalLaba: 0,
-            count: 0,
-            cash: 0,
-            qris: 0,
-            tempo: 0
-        });
-        const transactions = Vue.ref([]);
-
-        const loadLaporan = async () => {
-            const today = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
-            const allTransactions = await db.transactions.toArray();
-            
-            // Filter transaksi hari ini
-            const todayTrans = allTransactions.filter(t => t.date.startsWith(today));
-            
-            let omzet = 0;
-            let laba = 0;
-            let cash = 0;
-            let qris = 0;
-            let tempo = 0;
-
-            todayTrans.forEach(t => {
-                omzet += t.total;
-                
-                // Hitung laba (Harga Jual - Harga Modal per item)
-                t.items.forEach(item => {
-                    const modal = item.price_modal || 0;
-                    laba += (item.price_sell - modal) * item.qty;
-                });
-
-                if (t.paymentMethod === 'cash') cash += t.total;
-                else if (t.paymentMethod === 'qris') qris += t.total;
-                else if (t.paymentMethod === 'tempo') tempo += t.total;
-            });
-
-            summary.value = { 
-                totalOmzet: omzet, 
-                totalLaba: laba, 
-                count: todayTrans.length,
-                cash, qris, tempo 
-            };
-            transactions.value = todayTrans.reverse(); // Terbaru di atas
-        };
-
-        const formatRupiah = (val) => "Rp " + val.toLocaleString('id-ID');
-
-        Vue.onMounted(loadLaporan);
-
-        return { summary, transactions, formatRupiah };
-    },
-    template: `
-    <div class="p-4 flex flex-col gap-4 bg-gray-50 min-h-full">
-        <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
-            <div class="text-center mb-6">
-                <span class="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em]">Estimasi Laba Hari Ini</span>
-                <h2 class="text-3xl font-black text-gray-800 m-0">{{ formatRupiah(summary.totalLaba) }}</h2>
-                <div class="inline-block px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[9px] font-black mt-2 uppercase">
-                    Omzet: {{ formatRupiah(summary.totalOmzet) }}
-                </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-2">
-                <div class="bg-gray-50 p-3 rounded-2xl text-center">
-                    <div class="text-[8px] font-black text-gray-400 uppercase mb-1">Tunai</div>
-                    <div class="text-[10px] font-bold text-gray-700">{{ formatRupiah(summary.cash) }}</div>
-                </div>
-                <div class="bg-gray-50 p-3 rounded-2xl text-center">
-                    <div class="text-[8px] font-black text-gray-400 uppercase mb-1">QRIS</div>
-                    <div class="text-[10px] font-bold text-gray-700">{{ formatRupiah(summary.qris) }}</div>
-                </div>
-                <div class="bg-gray-50 p-3 rounded-2xl text-center">
-                    <div class="text-[8px] font-black text-gray-400 uppercase mb-1">Tempo</div>
-                    <div class="text-[10px] font-bold text-red-500">{{ formatRupiah(summary.tempo) }}</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex flex-col gap-2">
-            <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Riwayat Hari Ini ({{ summary.count }})</h4>
-            
-            <div v-for="t in transactions" :key="t.id" class="bg-white p-4 rounded-2xl flex items-center justify-between border border-gray-100">
-                <div class="flex items-center gap-3">
-                    <div :class="t.paymentMethod === 'tempo' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'" 
-                         class="w-10 h-10 rounded-xl flex items-center justify-center text-lg">
-                        <i :class="t.paymentMethod === 'cash' ? 'ri-money-dollar-circle-line' : (t.paymentMethod === 'qris' ? 'ri-qr-code-line' : 'ri-hand-coin-line')"></i>
-                    </div>
-                    <div>
-                        <div class="text-[11px] font-black text-gray-800 uppercase">#{{ t.id }} - {{ t.paymentMethod }}</div>
-                        <div class="text-[9px] text-gray-400 font-bold">{{ new Date(t.date).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'}) }}</div>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <div class="text-sm font-black text-gray-800">{{ formatRupiah(t.total) }}</div>
-                    <div class="text-[9px] font-bold" :class="t.status === 'lunas' ? 'text-green-500' : 'text-red-500'">{{ t.status.toUpperCase() }}</div>
-                </div>
-            </div>
-
-            <div v-if="transactions.length === 0" class="py-10 text-center opacity-30">
-                <i class="ri-inbox-line text-4xl"></i>
-                <p class="text-[10px] font-black uppercase mt-2">Belum ada transaksi</p>
-            </div>
-        </div>
-    </div>
-    `
-};
-
-
-
-components/pages/LaporanLabaRugi.js
-window.PageLabaRugi = {
-    template: `
-        <div class="p-6 space-y-7 pb-24 bg-white min-h-full">
-            
-            <div class="flex items-center bg-slate-50 rounded-2xl p-1.5 border border-slate-100">
-                <div class="flex-1">
-                    <input type="date" v-model="filter.start" @change="loadData" 
-                        class="w-full bg-transparent border-none text-[10px] font-black text-slate-500 focus:ring-0 py-2 px-3 uppercase tracking-tighter text-center">
-                </div>
-                <div class="w-[1px] h-4 bg-slate-200"></div>
-                <div class="flex-1">
-                    <input type="date" v-model="filter.end" @change="loadData" 
-                        class="w-full bg-transparent border-none text-[10px] font-black text-slate-500 focus:ring-0 py-2 px-3 uppercase tracking-tighter text-center">
-                </div>
-            </div>
-
-            <div class="py-4">
-                <p class="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] mb-3 text-center">Net Profit</p>
-                <div class="text-center">
-                    <h3 class="text-5xl font-black text-slate-800 tracking-tighter inline-block">
-                        <span class="text-blue-500 text-lg align-top mr-1 font-bold">Rp</span>{{ stats.totalLabaBersih.toLocaleString('id-ID') }}
-                    </h3>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <div class="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
-                    <div class="flex items-center gap-2 mb-2">
-                        <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Revenue</span>
-                    </div>
-                    <p class="text-sm font-black text-slate-700">Rp {{ stats.totalOmzet.toLocaleString('id-ID') }}</p>
-                </div>
-
-                <div class="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
-                    <div class="flex items-center gap-2 mb-2">
-                        <div class="w-1.5 h-1.5 rounded-full bg-orange-400"></div>
-                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Expenses</span>
-                    </div>
-                    <p class="text-sm font-black text-slate-700">Rp {{ stats.totalModal.toLocaleString('id-ID') }}</p>
-                </div>
-            </div>
-
-            <div class="bg-blue-50/50 rounded-[2rem] p-6 border border-blue-100/50 flex justify-between items-center">
-                <div>
-                    <p class="text-[8px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1 text-left">Margin Profit</p>
-                    <p class="text-xl font-black text-blue-600 tracking-tight">{{ calculateMargin() }}%</p>
-                </div>
-                <div class="text-right">
-                    <p class="text-[8px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">Avg per Sale</p>
-                    <p class="text-xs font-black text-slate-600">Rp {{ calculateAvg().toLocaleString('id-ID') }}</p>
-                </div>
-            </div>
-
-            <div class="flex justify-center items-center gap-2 pt-2">
-                <div class="h-[1px] w-8 bg-slate-100"></div>
-                <p class="text-[9px] font-black text-slate-300 uppercase tracking-widest">{{ stats.count }} Transactions</p>
-                <div class="h-[1px] w-8 bg-slate-100"></div>
-            </div>
-
-            <div v-if="stats.count === 0" class="py-10 text-center text-slate-200">
-                <i class="ri-bar-chart-2-line text-4xl opacity-20"></i>
-            </div>
-        </div>
-    `,
-    setup() {
-        const stats = Vue.ref({ totalOmzet: 0, totalModal: 0, totalLabaBersih: 0, count: 0 });
-        const now = new Date();
-        const filter = Vue.ref({
-            start: new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0],
-            end: new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
-        });
-
-        const loadData = async () => {
-            const startStr = filter.value.start + "T00:00:00.000Z";
-            const endStr = filter.value.end + "T23:59:59.999Z";
-            if (window.hitungLabaRugi) {
-                const res = await window.hitungLabaRugi(startStr, endStr);
-                stats.value = res;
-            }
-        };
-
-        const calculateMargin = () => {
-            if (stats.value.totalOmzet === 0) return 0;
-            return ((stats.value.totalLabaBersih / stats.value.totalOmzet) * 100).toFixed(1);
-        };
-
-        const calculateAvg = () => {
-            if (stats.value.count === 0) return 0;
-            return Math.round(stats.value.totalLabaBersih / stats.value.count);
-        };
-
-        Vue.onMounted(loadData);
-        return { stats, filter, loadData, calculateMargin, calculateAvg };
-    }
-};
-
-
-components/pages/Pengaturan.js
-// components/pages/Pengaturan.js //
-const PagePengaturan = {
-    setup() {
-        const stats = Vue.ref({
-            products: 0,
-            transactions: 0,
-            members: 0
-        });
-
-        // Ambil ringkasan data untuk info kasir
-        const loadStats = async () => {
-            stats.value.products = await db.products.count();
-            stats.value.transactions = await db.transactions.count();
-            stats.value.members = await db.members.count();
-        };
-
-        const handleExport = async () => {
-            const res = await BackupService.exportData();
-            if (res.success) alert(res.message);
-        };
-
-        const handleImport = async (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const res = await BackupService.importData(file);
-            if (res.success) {
-                alert(res.message);
-                window.location.reload(); // Reload untuk menyegarkan state database di UI
-            } else {
-                alert("Gagal: " + res.message);
-            }
-            // Reset input file
-            event.target.value = '';
-        };
-
-        Vue.onMounted(loadStats);
-
-        return { stats, handleExport, handleImport };
-    },
-    template: `
-    <div class="p-4 flex flex-col gap-6">
-        
-        <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-[2rem] text-white shadow-xl">
-            <h3 class="text-sm font-black uppercase tracking-widest opacity-80 m-0">Status Data</h3>
-            <div class="grid grid-cols-3 gap-4 mt-4 text-center">
-                <div>
-                    <div class="text-xl font-black">{{ stats.products }}</div>
-                    <div class="text-[8px] font-bold uppercase opacity-60">Produk</div>
-                </div>
-                <div class="border-l border-white/20">
-                    <div class="text-xl font-black">{{ stats.transactions }}</div>
-                    <div class="text-[8px] font-bold uppercase opacity-60">Transaksi</div>
-                </div>
-                <div class="border-l border-white/20">
-                    <div class="text-xl font-black">{{ stats.members }}</div>
-                    <div class="text-[8px] font-bold uppercase opacity-60">Member</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex flex-col gap-4">
-            <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2">Keamanan & Cadangan</h4>
-            
-            <div @click="handleExport" class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 active:scale-95 transition-all cursor-pointer">
-                <div class="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center text-2xl">
-                    <i class="ri-cloud-download-line"></i>
-                </div>
-                <div class="flex-1">
-                    <div class="text-sm font-black text-gray-800 uppercase">Download Backup</div>
-                    <div class="text-[10px] text-gray-500 font-medium">Simpan data ke file .json</div>
-                </div>
-                <i class="ri-arrow-right-s-line text-gray-300 text-xl"></i>
-            </div>
-
-            <label class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 active:scale-95 transition-all cursor-pointer">
-                <div class="w-12 h-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center text-2xl">
-                    <i class="ri-upload-cloud-2-line"></i>
-                </div>
-                <div class="flex-1">
-                    <div class="text-sm font-black text-gray-800 uppercase">Restore Data</div>
-                    <div class="text-[10px] text-gray-500 font-medium">Pulihkan data dari file backup</div>
-                    <input type="file" accept=".json" @change="handleImport" class="hidden">
-                </div>
-                <i class="ri-arrow-right-s-line text-gray-300 text-xl"></i>
-            </label>
-        </div>
-
-        <div class="mt-4 p-6 border-2 border-dashed border-gray-200 rounded-[2rem] text-center">
-            <i class="ri-smartphone-line text-2xl text-gray-300"></i>
-            <div class="text-[9px] font-black text-gray-400 uppercase mt-2 tracking-widest">Sinar Pagi POS v1.3.0</div>
-            <div class="text-[8px] text-gray-300 font-bold uppercase">Database: IndexedDB (Offline First)</div>
-        </div>
-
-    </div>
-    `
-};
-
-
-components/pages/StrukNota.js
-// components/pages/StrukNota.js //
-const StrukNota = {
-    props: ['transaksi', 'settings'],
-    template: `
-    <div id="print-section" class="print-only">
-        <div class="struk-wrapper">
-            <div class="struk-header">
-                <h2 class="store-name">{{ settings.storeName || 'SINAR PAGI' }}</h2>
-                <p class="store-address">{{ settings.address || 'Alamat Belum Diatur' }}</p>
-                <p class="store-phone">{{ settings.phone || '' }}</p>
-            </div>
-            
-            <div class="struk-divider">--------------------------------</div>
-            
-            <div class="struk-info">
-                <span>No: #{{ transaksi.id }}</span>
-                <span class="text-right">{{ new Date(transaksi.date).toLocaleDateString('id-ID') }}</span>
-                <span>Kasir: {{ transaksi.kasir || 'Kasir' }}</span>
-                <span class="text-right">{{ new Date(transaksi.date).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'}) }}</span>
-            </div>
-
-            <div class="struk-divider">--------------------------------</div>
-
-            <div class="struk-items">
-                <div v-for="item in transaksi.items" :key="item.id" class="item-row">
-                    <div class="item-name">{{ item.name.toUpperCase() }}</div>
-                    <div class="item-details">
-                        <span>{{ item.qty }} x {{ item.price_sell.toLocaleString('id-ID') }}</span>
-                        <span class="text-right">{{ (item.qty * item.price_sell).toLocaleString('id-ID') }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="struk-divider">--------------------------------</div>
-
-            <div class="struk-total">
-                <div class="total-row">
-                    <span>TOTAL</span>
-                    <span class="text-right">Rp {{ transaksi.total.toLocaleString('id-ID') }}</span>
-                </div>
-                <div class="total-row" v-if="transaksi.paymentMethod === 'cash'">
-                    <span>BAYAR</span>
-                    <span class="text-right">Rp {{ (transaksi.amountPaid || 0).toLocaleString('id-ID') }}</span>
-                </div>
-                <div class="total-row highlight" v-if="transaksi.paymentMethod === 'cash'">
-                    <span>KEMBALI</span>
-                    <span class="text-right">Rp {{ (transaksi.change || 0).toLocaleString('id-ID') }}</span>
-                </div>
-                <div class="total-row" v-else>
-                    <span>METODE</span>
-                    <span class="text-right uppercase">{{ transaksi.paymentMethod }}</span>
-                </div>
-            </div>
-
-            <div class="struk-divider">--------------------------------</div>
-            
-            <div class="struk-footer">
-                <p>Terima Kasih Atas Kunjungan Anda</p>
-                <p>Barang yang sudah dibeli tidak dapat ditukar/dikembalikan</p>
-            </div>
-        </div>
-    </div>
-    `
-};
-
-analisa file file diatas tersebut dan ini struktur nya :
-root/:
-- components/
-- GlobalSearch.js
-- Layout.js
-- Placeholder.js
-- pages/
--ArusUang.js
--DaftarProduk.js
--Dashboard.js
--DataKasir.js
--DataMember.js
--DataSuplier.js
--HargaGrosir.js
--HargaPaket.js
--KategoriProduk.js
--LaporanBulanan.js
--LaporanHarian.js
--LaporanLabaRugi.js
--LaporanMingguan.js
--PaketProduk.js
--Pemasukan.js
--Pengaturan.js
--Pengeluaran.js
--Penjualan.js
--PiutangPenjualan.js
--StockMonitor.js
--StrukNota.js
--TambahProduk.js
--TotalSaldo.js
-- css/
-- style.css
-- js/
-- app.js
-- backup.js
-- database.js
-- routes.js
-- lib/
--dayjs.min.js v1.11.10
--dexie.min.js
--font-awesome.min.css
--pico.min.css
--react-dom.js
--react.js
--remixicon.css
--remixicon.svg
--remixicon.ttf
--remixicon.woff
--remixicon.woff2
--tailwind.css
--unocss.js
--vue.js v3.5.26
--workbox-sw.js
-- index.html
-- manifest.json
-- sw.js
-
-berikan analisa mu

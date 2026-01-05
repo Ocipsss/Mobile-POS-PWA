@@ -67,7 +67,7 @@ const PageArusUang = {
         return { summary, isLoading, formatR, lihatDetailPiutang };
     },
     template: `
-    <div class="p-4 flex flex-col gap-6 pb-24 animate-zoom-in">
+    <div class="w-full flex flex-col gap-4 py-2 animate-zoom-in no-scrollbar px-1 pb-24">
         <div class="flex justify-between items-center px-2">
             <h3 class="text-lg font-black text-gray-800 uppercase tracking-tight">Arus Kas & Piutang</h3>
             <button @click="hitungArusKas" class="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center border-none active:rotate-180 transition-all">
