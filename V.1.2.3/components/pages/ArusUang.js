@@ -76,7 +76,7 @@ const PageArusUang = {
         </div>
 
         <div class="grid grid-cols-1 gap-4">
-            <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 flex justify-between items-center">
+            <div class="bg-white p-6 rounded-[0.5rem] shadow-sm border border-gray-100 flex justify-between items-center">
                 <div>
                     <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Uang di Laci (Cash)</span>
                     <div class="text-2xl font-black text-gray-800">{{ formatR(summary.saldoCash) }}</div>
@@ -86,7 +86,7 @@ const PageArusUang = {
                 </div>
             </div>
 
-            <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 flex justify-between items-center">
+            <div class="bg-white p-6 rounded-[0.5rem] shadow-sm border border-gray-100 flex justify-between items-center">
                 <div>
                     <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Saldo Bank (QRIS)</span>
                     <div class="text-2xl font-black text-gray-800">{{ formatR(summary.saldoQRIS) }}</div>
@@ -96,7 +96,7 @@ const PageArusUang = {
                 </div>
             </div>
 
-            <div @click="lihatDetailPiutang" class="bg-orange-500 p-6 rounded-[2.5rem] shadow-lg shadow-orange-100 flex justify-between items-center text-white active:scale-95 transition-all cursor-pointer">
+            <div @click="lihatDetailPiutang" class="bg-orange-500 p-6 rounded-[0.5rem] shadow-lg shadow-orange-100 flex justify-between items-center text-white active:scale-95 transition-all cursor-pointer">
                 <div>
                     <div class="flex items-center gap-2 mb-1">
                         <span class="text-[10px] font-black text-orange-100 uppercase tracking-widest block">Piutang (Belum Bayar)</span>
@@ -110,7 +110,7 @@ const PageArusUang = {
             </div>
         </div>
 
-        <div class="bg-gray-900 p-8 rounded-[3rem] relative overflow-hidden">
+        <div class="bg-gray-900 p-8 rounded-[0.5rem] relative overflow-hidden">
             <div class="relative z-10">
                 <span class="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Total Aset Kas + Piutang</span>
                 <div class="text-3xl font-black text-white mt-2">{{ formatR(summary.saldoCash + summary.saldoQRIS + summary.totalPiutang) }}</div>
