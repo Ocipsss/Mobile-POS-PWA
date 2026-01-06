@@ -1,6 +1,3 @@
-// components/pages/DaftarProduk.js //
-// v1.7 - Full Replace: Barcode Edit & Category Dropdown Added //
-
 const PageDaftarProduk = {
     setup(props, { emit }) {
         const products = Vue.ref([]);
@@ -46,17 +43,13 @@ const PageDaftarProduk = {
 
         const updateProduct = async () => {
             try {
-                // 1. Update ke database lokal (Dexie)
                 await db.products.update(editingProduct.value.id, editingProduct.value);
-                
-                // 2. Update ke Firebase Realtime Database (Logika Asli)
                 if (typeof fdb !== 'undefined') {
                     await fdb.ref('products/' + editingProduct.value.id).update({
                         ...editingProduct.value,
                         updatedAt: new Date().toISOString()
                     });
                 }
-
                 isEditModalOpen.value = false;
                 await loadData();
                 alert("Produk berhasil diperbarui!");
@@ -81,6 +74,22 @@ const PageDaftarProduk = {
             }
         };
 
+        // LOGIKA BARU: Menangkap hasil scan dari App.js
+        const handleScanEvent = (e) => {
+            if (isEditModalOpen.value && editingProduct.value) {
+                editingProduct.value.code = e.detail;
+            }
+        };
+
+        Vue.onMounted(() => {
+            loadData();
+            window.addEventListener('barcode-scanned-edit', handleScanEvent);
+        });
+
+        Vue.onUnmounted(() => {
+            window.removeEventListener('barcode-scanned-edit', handleScanEvent);
+        });
+
         const filteredProducts = Vue.computed(() => {
             return products.value.filter(p => {
                 const matchCategory = selectedCategory.value === "Semua" || p.category === selectedCategory.value;
@@ -89,8 +98,6 @@ const PageDaftarProduk = {
         });
 
         const formatRupiah = (val) => "Rp " + (val || 0).toLocaleString('id-ID');
-
-        Vue.onMounted(loadData);
 
         return { 
             selectedCategory, listCategories, filteredProducts, 
@@ -101,7 +108,6 @@ const PageDaftarProduk = {
     
     template: `
         <div class="flex flex-col gap-3 pb-28">
-            
             <div class="sticky top-0 z-40 bg-white/95 backdrop-blur-md pt-2 pb-3 -mx-4 px-4 border-b border-gray-100">
                 <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
                     <button @click="selectedCategory = 'Semua'" 
@@ -120,16 +126,13 @@ const PageDaftarProduk = {
             <div class="flex flex-col gap-2">
                 <div v-for="p in filteredProducts" :key="p.id" 
                     class="bg-white p-3 rounded-3xl border border-gray-50 shadow-sm flex items-center gap-3 active:bg-gray-50 transition-all">
-                    
                     <div class="w-12 h-12 bg-blue-50 rounded-2xl overflow-hidden flex-shrink-0 flex items-center justify-center">
                         <img v-if="p.image" :src="p.image" class="w-full h-full object-cover">
                         <i v-else class="ri-shopping-bag-3-fill text-blue-300 text-xl"></i>
                     </div>
-
                     <div class="flex-1 min-w-0">
                         <div class="text-[13px] font-black text-gray-800 truncate leading-tight uppercase">{{ p.name }}</div>
                         <div class="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{{ p.code || 'Tanpa Kode' }}</div>
-
                         <div class="flex items-center gap-2 mt-1">
                             <span class="text-[11px] font-black text-blue-600">{{ formatRupiah(p.price_sell) }}</span>
                             <span class="text-[10px] text-gray-300 font-medium">|</span>
@@ -138,7 +141,6 @@ const PageDaftarProduk = {
                             </span>
                         </div>
                     </div>
-
                     <div class="flex gap-1.5">
                         <button @click="openEdit(p)" class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 border-none flex items-center justify-center active:scale-90 transition-all">
                             <i class="ri-edit-line text-lg"></i>
@@ -147,11 +149,6 @@ const PageDaftarProduk = {
                             <i class="ri-delete-bin-line text-lg"></i>
                         </button>
                     </div>
-                </div>
-
-                <div v-if="filteredProducts.length === 0" class="py-20 text-center opacity-60">
-                    <i class="ri-archive-line text-4xl text-gray-200"></i>
-                    <p class="text-gray-400 text-[10px] mt-2 font-black uppercase tracking-widest">Belum ada produk di kategori ini</p>
                 </div>
             </div>
 
@@ -163,9 +160,7 @@ const PageDaftarProduk = {
                             <i class="ri-close-line text-xl text-gray-500"></i>
                         </button>
                     </div>
-
                     <div class="flex flex-col gap-4 overflow-y-auto max-h-[60vh] pb-4 no-scrollbar">
-                        
                         <div class="form-group">
                             <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Barcode / Kode</label>
                             <div class="flex gap-2">
@@ -175,12 +170,10 @@ const PageDaftarProduk = {
                                 </button>
                             </div>
                         </div>
-
                         <div class="form-group">
                             <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Nama Produk</label>
                             <input v-model="editingProduct.name" type="text" class="form-control !rounded-2xl bg-gray-50 border-none py-3 font-bold">
                         </div>
-
                         <div class="form-group">
                             <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Kategori</label>
                             <select v-model="editingProduct.category" class="form-control !rounded-2xl bg-gray-50 border-none py-3 font-bold outline-none">
@@ -188,7 +181,6 @@ const PageDaftarProduk = {
                                 <option v-for="c in listCategories" :key="c.id" :value="c.name">{{ c.name }}</option>
                             </select>
                         </div>
-
                         <div class="grid grid-cols-2 gap-3">
                             <div class="form-group">
                                 <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Harga Modal</label>
@@ -199,7 +191,6 @@ const PageDaftarProduk = {
                                 <input :value="displaySell" @input="updateNumber('price_sell', $event)" type="text" inputmode="numeric" class="form-control font-black text-green-600 bg-green-50/50 border-none !rounded-2xl py-3 text-center">
                             </div>
                         </div>
-
                         <div class="grid grid-cols-2 gap-3">
                             <div class="form-group">
                                 <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Stok</label>
@@ -211,7 +202,6 @@ const PageDaftarProduk = {
                             </div>
                         </div>
                     </div>
-
                     <button @click="updateProduct" class="w-full bg-blue-600 text-white py-4 rounded-[20px] font-black mt-4 uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all">
                         Simpan Perubahan
                     </button>

@@ -1,4 +1,3 @@
-// Full Replace isi js/app.js dengan ini //
 const { createApp, ref, computed, onMounted, watch } = Vue;
 
 const app = createApp({
@@ -18,7 +17,7 @@ const app = createApp({
         'page-dashboard': PageDashboard,
         'page-laba-rugi': window.PageLabaRugi, 
         'page-pengeluaran': PagePengeluaran,
-        'page-transaksi': PageTransaksi, // TAMBAHAN: Komponen Riwayat Transaksi
+        'page-transaksi': PageTransaksi, 
         'page-arus-uang': typeof PageArusUang !== 'undefined' ? PageArusUang : PlaceholderComponent,
         'page-digital-svc': typeof PageDigitalSvc !== 'undefined' ? PageDigitalSvc : PlaceholderComponent,
         'struk-nota': StrukNota, 
@@ -92,7 +91,14 @@ const app = createApp({
                     { fps: 15, qrbox: { width: 250, height: 150 } },
                     async (decodedText) => {
                         if (navigator.vibrate) navigator.vibrate(100);
-                        if (activePage.value === 'Tambah Produk') {
+                        
+                        // LOGIKA BARU: Kirim ke Daftar Produk (Modal Edit)
+                        if (activePage.value === 'Daftar Produk') {
+                            window.dispatchEvent(new CustomEvent('barcode-scanned-edit', { detail: decodedText }));
+                            stopScanner();
+                        } 
+                        // LOGIKA SEBELUMNYA: Tambah Produk
+                        else if (activePage.value === 'Tambah Produk') {
                             const inputBarcode = document.querySelector('input[placeholder="Scan atau manual..."]');
                             if (inputBarcode) {
                                 inputBarcode.value = decodedText;
@@ -100,6 +106,7 @@ const app = createApp({
                                 stopScanner();
                             }
                         } 
+                        // LOGIKA SEBELUMNYA: Penjualan
                         else {
                             const product = await db.products.where('code').equals(decodedText).first();
                             if (product) {
@@ -221,7 +228,7 @@ const app = createApp({
                 'Dashboard': 'page-dashboard', 
                 'Laba Rugi': 'page-laba-rugi',
                 'Pengeluaran': 'page-pengeluaran',
-                'Riwayat Transaksi': 'page-transaksi', // TAMBAHAN: Map ke komponen riwayat
+                'Riwayat Transaksi': 'page-transaksi', 
                 'Arus Uang': 'page-arus-uang',
                 'Layanan Digital': 'page-digital-svc' 
             };
