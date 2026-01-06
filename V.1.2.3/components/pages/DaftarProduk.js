@@ -1,8 +1,8 @@
 // components/pages/DaftarProduk.js //
-// v1.6 - Added Cloud Sync & Pack Info //
+// v1.7 - Full Replace: Barcode Edit & Category Dropdown Added //
 
 const PageDaftarProduk = {
-    setup() {
+    setup(props, { emit }) {
         const products = Vue.ref([]);
         const selectedCategory = Vue.ref("Semua");
         const listCategories = Vue.ref([]);
@@ -44,13 +44,12 @@ const PageDaftarProduk = {
             isEditModalOpen.value = true;
         };
 
-        // REVISI: Update Lokal + Cloud (Firebase)
         const updateProduct = async () => {
             try {
                 // 1. Update ke database lokal (Dexie)
                 await db.products.update(editingProduct.value.id, editingProduct.value);
                 
-                // 2. Update ke Firebase Realtime Database
+                // 2. Update ke Firebase Realtime Database (Logika Asli)
                 if (typeof fdb !== 'undefined') {
                     await fdb.ref('products/' + editingProduct.value.id).update({
                         ...editingProduct.value,
@@ -60,20 +59,17 @@ const PageDaftarProduk = {
 
                 isEditModalOpen.value = false;
                 await loadData();
-                alert("Produk berhasil diperbarui di Cloud!");
+                alert("Produk berhasil diperbarui!");
             } catch (err) {
                 console.error("Update Error:", err);
                 alert("Gagal memperbarui produk: " + err.message);
             }
         };
 
-        // REVISI: Hapus Lokal + Cloud (Firebase)
         const deleteProduct = async (id) => {
             if (confirm("Hapus produk ini secara permanen dari Cloud?")) {
                 try {
-                    // Hapus Lokal
                     await db.products.delete(id);
-                    // Hapus Cloud
                     if (typeof fdb !== 'undefined') {
                         await fdb.ref('products/' + id).remove();
                     }
@@ -132,12 +128,7 @@ const PageDaftarProduk = {
 
                     <div class="flex-1 min-w-0">
                         <div class="text-[13px] font-black text-gray-800 truncate leading-tight uppercase">{{ p.name }}</div>
-                        
-                        <div v-if="p.pack_price" class="flex items-center gap-1 mt-0.5">
-                            <span class="text-[9px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded">
-                                Beli: Rp{{ p.pack_price.toLocaleString() }} /{{ p.pack_size }}pcs
-                            </span>
-                        </div>
+                        <div class="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{{ p.code || 'Tanpa Kode' }}</div>
 
                         <div class="flex items-center gap-2 mt-1">
                             <span class="text-[11px] font-black text-blue-600">{{ formatRupiah(p.price_sell) }}</span>
@@ -172,11 +163,32 @@ const PageDaftarProduk = {
                             <i class="ri-close-line text-xl text-gray-500"></i>
                         </button>
                     </div>
+
                     <div class="flex flex-col gap-4 overflow-y-auto max-h-[60vh] pb-4 no-scrollbar">
+                        
+                        <div class="form-group">
+                            <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Barcode / Kode</label>
+                            <div class="flex gap-2">
+                                <input v-model="editingProduct.code" type="text" class="form-control flex-1 !rounded-2xl bg-gray-50 border-none py-3 font-bold" placeholder="Kode Produk">
+                                <button @click="$emit('open-scanner')" class="w-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center border-none active:scale-90">
+                                    <i class="ri-qr-scan-2-line text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="form-group">
                             <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Nama Produk</label>
                             <input v-model="editingProduct.name" type="text" class="form-control !rounded-2xl bg-gray-50 border-none py-3 font-bold">
                         </div>
+
+                        <div class="form-group">
+                            <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Kategori</label>
+                            <select v-model="editingProduct.category" class="form-control !rounded-2xl bg-gray-50 border-none py-3 font-bold outline-none">
+                                <option value="" disabled>Pilih Kategori</option>
+                                <option v-for="c in listCategories" :key="c.id" :value="c.name">{{ c.name }}</option>
+                            </select>
+                        </div>
+
                         <div class="grid grid-cols-2 gap-3">
                             <div class="form-group">
                                 <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Harga Modal</label>
@@ -187,6 +199,7 @@ const PageDaftarProduk = {
                                 <input :value="displaySell" @input="updateNumber('price_sell', $event)" type="text" inputmode="numeric" class="form-control font-black text-green-600 bg-green-50/50 border-none !rounded-2xl py-3 text-center">
                             </div>
                         </div>
+
                         <div class="grid grid-cols-2 gap-3">
                             <div class="form-group">
                                 <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Stok</label>
@@ -198,6 +211,7 @@ const PageDaftarProduk = {
                             </div>
                         </div>
                     </div>
+
                     <button @click="updateProduct" class="w-full bg-blue-600 text-white py-4 rounded-[20px] font-black mt-4 uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all">
                         Simpan Perubahan
                     </button>
