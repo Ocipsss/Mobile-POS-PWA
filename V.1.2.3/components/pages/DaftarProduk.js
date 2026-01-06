@@ -1,11 +1,16 @@
+// components/pages/DaftarProduk.js //
+// v1.9 - Added Product Detail View & Global Search Integration //
+
 const PageDaftarProduk = {
     setup(props, { emit }) {
         const products = Vue.ref([]);
-        const selectedCategory = Vue.ref("Semua");
         const listCategories = Vue.ref([]);
         
         const isEditModalOpen = Vue.ref(false);
+        const isDetailModalOpen = Vue.ref(false); // State Modal Detail
         const editingProduct = Vue.ref(null);
+        const detailProduct = Vue.ref(null); // Data Detail
+        
         const displayModal = Vue.ref("");
         const displaySell = Vue.ref("");
 
@@ -26,7 +31,6 @@ const PageDaftarProduk = {
         const updateNumber = (field, event) => {
             let rawValue = event.target.value.replace(/\D/g, "");
             let numValue = parseInt(rawValue) || 0;
-            
             if (editingProduct.value) {
                 editingProduct.value[field] = numValue;
                 if (field === 'price_modal') displayModal.value = formatRupiahDisplay(numValue);
@@ -34,10 +38,17 @@ const PageDaftarProduk = {
             }
         };
 
+        // Fungsi Buka Detail
+        const openDetail = (p) => {
+            detailProduct.value = p;
+            isDetailModalOpen.value = true;
+        };
+
         const openEdit = (p) => {
             editingProduct.value = JSON.parse(JSON.stringify(p));
             displayModal.value = formatRupiahDisplay(p.price_modal);
             displaySell.value = formatRupiahDisplay(p.price_sell);
+            isDetailModalOpen.value = false; // Tutup detail jika pindah edit
             isEditModalOpen.value = true;
         };
 
@@ -54,105 +65,129 @@ const PageDaftarProduk = {
                 await loadData();
                 alert("Produk berhasil diperbarui!");
             } catch (err) {
-                console.error("Update Error:", err);
-                alert("Gagal memperbarui produk: " + err.message);
+                alert("Gagal memperbarui: " + err.message);
             }
         };
 
         const deleteProduct = async (id) => {
-            if (confirm("Hapus produk ini secara permanen dari Cloud?")) {
+            if (confirm("Hapus produk ini secara permanen?")) {
                 try {
                     await db.products.delete(id);
-                    if (typeof fdb !== 'undefined') {
-                        await fdb.ref('products/' + id).remove();
-                    }
+                    if (typeof fdb !== 'undefined') await fdb.ref('products/' + id).remove();
+                    isDetailModalOpen.value = false;
                     await loadData();
                     alert("Produk dihapus!");
-                } catch (err) {
-                    alert("Gagal menghapus produk");
-                }
+                } catch (err) { alert("Gagal menghapus"); }
             }
         };
 
-        // LOGIKA BARU: Menangkap hasil scan dari App.js
+        // Event Listener untuk Barcode & Global Search Detail
         const handleScanEvent = (e) => {
             if (isEditModalOpen.value && editingProduct.value) {
                 editingProduct.value.code = e.detail;
             }
         };
 
+        const handleOpenDetailEvent = (e) => {
+            openDetail(e.detail);
+        };
+
         Vue.onMounted(() => {
             loadData();
             window.addEventListener('barcode-scanned-edit', handleScanEvent);
+            window.addEventListener('open-product-detail', handleOpenDetailEvent);
         });
 
         Vue.onUnmounted(() => {
             window.removeEventListener('barcode-scanned-edit', handleScanEvent);
-        });
-
-        const filteredProducts = Vue.computed(() => {
-            return products.value.filter(p => {
-                const matchCategory = selectedCategory.value === "Semua" || p.category === selectedCategory.value;
-                return matchCategory;
-            });
+            window.removeEventListener('open-product-detail', handleOpenDetailEvent);
         });
 
         const formatRupiah = (val) => "Rp " + (val || 0).toLocaleString('id-ID');
 
         return { 
-            selectedCategory, listCategories, filteredProducts, 
-            deleteProduct, formatRupiah, isEditModalOpen, editingProduct, 
-            openEdit, updateProduct, displayModal, displaySell, updateNumber 
+            products, listCategories, deleteProduct, formatRupiah, 
+            isEditModalOpen, editingProduct, openEdit, updateProduct, 
+            displayModal, displaySell, updateNumber,
+            isDetailModalOpen, detailProduct, openDetail
         };
     },
     
     template: `
-        <div class="flex flex-col gap-3 pb-28">
-            <div class="sticky top-0 z-40 bg-white/95 backdrop-blur-md pt-2 pb-3 -mx-4 px-4 border-b border-gray-100">
-                <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
-                    <button @click="selectedCategory = 'Semua'" 
-                        :class="selectedCategory === 'Semua' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-50 text-gray-400'"
-                        class="px-5 py-2 rounded-full text-[10px] font-black uppercase border-none transition-all whitespace-nowrap active:scale-95">
-                        Semua
-                    </button>
-                    <button v-for="c in listCategories" :key="c.id" @click="selectedCategory = c.name" 
-                        :class="selectedCategory === c.name ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-50 text-gray-400'"
-                        class="px-5 py-2 rounded-full text-[10px] font-black uppercase border-none transition-all whitespace-nowrap active:scale-95">
-                        {{c.name}}
-                    </button>
-                </div>
-            </div>
-
+        <div class="flex flex-col gap-3 pb-28 pt-2">
+            
             <div class="flex flex-col gap-2">
-                <div v-for="p in filteredProducts" :key="p.id" 
-                    class="bg-white p-3 rounded-3xl border border-gray-50 shadow-sm flex items-center gap-3 active:bg-gray-50 transition-all">
+                <div v-for="p in products" :key="p.id" @click="openDetail(p)"
+                    class="bg-white p-3 rounded-3xl border border-gray-50 shadow-sm flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer">
+                    
                     <div class="w-12 h-12 bg-blue-50 rounded-2xl overflow-hidden flex-shrink-0 flex items-center justify-center">
                         <img v-if="p.image" :src="p.image" class="w-full h-full object-cover">
                         <i v-else class="ri-shopping-bag-3-fill text-blue-300 text-xl"></i>
                     </div>
+
                     <div class="flex-1 min-w-0">
                         <div class="text-[13px] font-black text-gray-800 truncate leading-tight uppercase">{{ p.name }}</div>
-                        <div class="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{{ p.code || 'Tanpa Kode' }}</div>
-                        <div class="flex items-center gap-2 mt-1">
-                            <span class="text-[11px] font-black text-blue-600">{{ formatRupiah(p.price_sell) }}</span>
-                            <span class="text-[10px] text-gray-300 font-medium">|</span>
-                            <span class="text-[10px] font-bold" :class="p.qty <= 5 ? 'text-red-500' : 'text-gray-400'">
-                                Stok: {{ p.qty }} <small class="font-normal">{{ p.unit }}</small>
-                            </span>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <span class="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{{ p.code || 'Tanpa Kode' }}</span>
+                            <span v-if="p.category" class="text-[8px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold uppercase">{{ p.category }}</span>
+                        </div>
+                        <div class="text-[11px] font-black text-blue-600 mt-1">{{ formatRupiah(p.price_sell) }}</div>
+                    </div>
+
+                    <div class="flex flex-col items-end gap-1">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-lg" :class="p.qty <= 5 ? 'bg-red-50 text-red-500' : 'bg-gray-50 text-gray-400'">
+                            {{ p.qty }} {{ p.unit }}
+                        </span>
+                        <i class="ri-arrow-right-s-line text-gray-300"></i>
+                    </div>
+                </div>
+
+                <div v-if="products.length === 0" class="py-20 text-center opacity-60">
+                    <i class="ri-archive-line text-4xl text-gray-200"></i>
+                    <p class="text-gray-400 text-[10px] mt-2 font-black uppercase tracking-widest">Belum ada produk terdaftar</p>
+                </div>
+            </div>
+
+            <div v-if="isDetailModalOpen" class="fixed inset-0 z-[110] flex items-end justify-center bg-black/40 backdrop-blur-sm" @click.self="isDetailModalOpen = false">
+                <div class="bg-white w-full max-w-md rounded-t-[32px] p-6 shadow-2xl animate-slide-up">
+                    <div class="flex justify-center mb-4"><div class="w-12 h-1.5 bg-gray-200 rounded-full"></div></div>
+                    
+                    <div class="text-center mb-6">
+                        <div class="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-3">
+                            <i class="ri-shopping-bag-3-line text-4xl text-blue-500"></i>
+                        </div>
+                        <h2 class="text-lg font-black text-gray-800 uppercase tracking-tight">{{ detailProduct.name }}</h2>
+                        <div class="flex justify-center gap-2 mt-1">
+                            <span class="px-3 py-1 bg-gray-100 rounded-full text-[9px] font-black text-gray-500 uppercase">{{ detailProduct.category || 'Tanpa Kategori' }}</span>
+                            <span class="px-3 py-1 bg-blue-100 rounded-full text-[9px] font-black text-blue-600 uppercase">{{ detailProduct.code || 'Tanpa Barcode' }}</span>
                         </div>
                     </div>
-                    <div class="flex gap-1.5">
-                        <button @click="openEdit(p)" class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 border-none flex items-center justify-center active:scale-90 transition-all">
-                            <i class="ri-edit-line text-lg"></i>
-                        </button>
-                        <button @click="deleteProduct(p.id)" class="w-9 h-9 rounded-xl bg-red-50 text-red-400 border-none flex items-center justify-center active:scale-90 transition-all">
-                            <i class="ri-delete-bin-line text-lg"></i>
-                        </button>
+
+                    <div class="grid grid-cols-2 gap-4 mb-8">
+                        <div class="bg-gray-50 p-4 rounded-3xl">
+                            <div class="text-[9px] font-black text-gray-400 uppercase mb-1">Stok & Satuan</div>
+                            <div class="text-base font-black text-gray-800">{{ detailProduct.qty }} <small class="text-[10px] font-bold uppercase opacity-50">{{ detailProduct.unit }}</small></div>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-3xl">
+                            <div class="text-[9px] font-black text-green-400 uppercase mb-1">Harga Jual</div>
+                            <div class="text-base font-black text-green-600">{{ formatRupiah(detailProduct.price_sell) }}</div>
+                        </div>
+                        <div class="col-span-2 bg-red-50/30 p-4 rounded-3xl border border-dashed border-red-100">
+                             <div class="flex justify-between items-center">
+                                <span class="text-[9px] font-black text-red-400 uppercase">Harga Modal</span>
+                                <span class="text-sm font-black text-red-500">{{ formatRupiah(detailProduct.price_modal) }}</span>
+                             </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button @click="deleteProduct(detailProduct.id)" class="flex-1 bg-gray-100 text-gray-500 py-4 rounded-2xl font-black uppercase text-[10px] active:scale-95 transition-all">Hapus</button>
+                        <button @click="openEdit(detailProduct)" class="flex-[2] bg-blue-600 text-white py-4 rounded-2xl font-black uppercase text-[10px] shadow-lg shadow-blue-200 active:scale-95 transition-all">Edit Data</button>
                     </div>
                 </div>
             </div>
 
-            <div v-if="isEditModalOpen" class="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 backdrop-blur-sm" @click.self="isEditModalOpen = false">
+            <div v-if="isEditModalOpen" class="fixed inset-0 z-[120] flex items-end justify-center bg-black/40 backdrop-blur-sm" @click.self="isEditModalOpen = false">
                 <div class="bg-white w-full max-w-md rounded-t-[32px] p-6 shadow-2xl animate-slide-up">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-lg font-black text-gray-800 uppercase tracking-tight">Edit Produk</h3>
@@ -160,6 +195,7 @@ const PageDaftarProduk = {
                             <i class="ri-close-line text-xl text-gray-500"></i>
                         </button>
                     </div>
+
                     <div class="flex flex-col gap-4 overflow-y-auto max-h-[60vh] pb-4 no-scrollbar">
                         <div class="form-group">
                             <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Barcode / Kode</label>
@@ -170,10 +206,12 @@ const PageDaftarProduk = {
                                 </button>
                             </div>
                         </div>
+
                         <div class="form-group">
                             <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Nama Produk</label>
                             <input v-model="editingProduct.name" type="text" class="form-control !rounded-2xl bg-gray-50 border-none py-3 font-bold">
                         </div>
+
                         <div class="form-group">
                             <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Kategori</label>
                             <select v-model="editingProduct.category" class="form-control !rounded-2xl bg-gray-50 border-none py-3 font-bold outline-none">
@@ -181,6 +219,7 @@ const PageDaftarProduk = {
                                 <option v-for="c in listCategories" :key="c.id" :value="c.name">{{ c.name }}</option>
                             </select>
                         </div>
+
                         <div class="grid grid-cols-2 gap-3">
                             <div class="form-group">
                                 <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Harga Modal</label>
@@ -191,6 +230,7 @@ const PageDaftarProduk = {
                                 <input :value="displaySell" @input="updateNumber('price_sell', $event)" type="text" inputmode="numeric" class="form-control font-black text-green-600 bg-green-50/50 border-none !rounded-2xl py-3 text-center">
                             </div>
                         </div>
+
                         <div class="grid grid-cols-2 gap-3">
                             <div class="form-group">
                                 <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block ml-1 tracking-widest">Stok</label>
@@ -202,6 +242,7 @@ const PageDaftarProduk = {
                             </div>
                         </div>
                     </div>
+
                     <button @click="updateProduct" class="w-full bg-blue-600 text-white py-4 rounded-[20px] font-black mt-4 uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all">
                         Simpan Perubahan
                     </button>

@@ -92,12 +92,10 @@ const app = createApp({
                     async (decodedText) => {
                         if (navigator.vibrate) navigator.vibrate(100);
                         
-                        // LOGIKA BARU: Kirim ke Daftar Produk (Modal Edit)
                         if (activePage.value === 'Daftar Produk') {
                             window.dispatchEvent(new CustomEvent('barcode-scanned-edit', { detail: decodedText }));
                             stopScanner();
                         } 
-                        // LOGIKA SEBELUMNYA: Tambah Produk
                         else if (activePage.value === 'Tambah Produk') {
                             const inputBarcode = document.querySelector('input[placeholder="Scan atau manual..."]');
                             if (inputBarcode) {
@@ -106,7 +104,6 @@ const app = createApp({
                                 stopScanner();
                             }
                         } 
-                        // LOGIKA SEBELUMNYA: Penjualan
                         else {
                             const product = await db.products.where('code').equals(decodedText).first();
                             if (product) {
@@ -207,6 +204,13 @@ const app = createApp({
         };
 
         const addBySearch = (product) => {
+            // LOGIKA BARU: Jika di halaman Daftar Produk, kirim event untuk buka detail
+            if (activePage.value === 'Daftar Produk') {
+                window.dispatchEvent(new CustomEvent('open-product-detail', { detail: product }));
+                globalSearchQuery.value = ""; searchResults.value = [];
+                return;
+            }
+            
             const inCart = cart.value.find(item => item.id === product.id);
             inCart ? inCart.qty++ : cart.value.push({ ...product, qty: 1 });
             globalSearchQuery.value = ""; searchResults.value = [];
