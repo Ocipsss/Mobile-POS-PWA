@@ -2,17 +2,18 @@
 const db = new Dexie("SinarPagiDB");
 
 /**
- * Versi 16: Memastikan sinkronisasi tabel transaksi reguler 
- * dan digital berjalan harmonis.
+ * Versi 17: Menambahkan tabel 'services' untuk manajemen jasa seduh/masak.
+ * Menaikkan versi untuk menghindari UpgradeError pada IndexedDB.
  */
-db.version(16).stores({
+db.version(17).stores({
     products: '++id, name, code, category, price_modal, price_sell, qty, unit',
     categories: '++id, name',
     transactions: '++id, date, total, memberId, paymentMethod, amountPaid, change, status',
     members: 'id, name, phone, address, total_spending, points', 
     expenses: '++id, date, category, amount, note, paymentMethod, cashPart, qrisPart',
     digital_transactions: '++id, date, type, provider, nominal, adminFee, adminPaymentMethod, totalReceived, profit',
-    settings: 'id, storeName'
+    settings: 'id, storeName',
+    services: '++id, name, price' // Tabel Baru untuk Jasa Seduh
 });
 
 // --- FUNGSI SINKRONISASI KELUAR (LOCAL -> CLOUD) ---
@@ -23,7 +24,7 @@ const syncToCloud = (table, id, data) => {
             if (data === null) {
                 ref.remove();
             } else {
-                // Pastikan data bersih dari reaktivitas Vue (jika ada)
+                // Pastikan data bersih dari reaktivitas Vue
                 const cleanData = JSON.parse(JSON.stringify(data));
                 ref.set(cleanData);
             }
@@ -37,7 +38,8 @@ const syncToCloud = (table, id, data) => {
 window.forceUploadAll = async () => {
     if (!confirm("Apakah Anda yakin ingin mengunggah SEMUA data lokal ke Firebase? Data di Cloud akan diperbarui.")) return;
     
-    const tables = ['products', 'categories', 'transactions', 'members', 'expenses', 'digital_transactions'];
+    // Menambahkan 'services' ke daftar tabel yang diunggah
+    const tables = ['products', 'categories', 'transactions', 'members', 'expenses', 'digital_transactions', 'services'];
     console.log("Memulai sinkronisasi massal...");
     
     try {
@@ -45,7 +47,6 @@ window.forceUploadAll = async () => {
             const items = await db[table].toArray();
             console.log(`Mengunggah ${items.length} data dari tabel ${table}...`);
             for (const item of items) {
-                // Gunakan item.id atau pk yang tersedia
                 const pk = item.id || item.code; 
                 await syncToCloud(table, pk, item);
             }
@@ -59,8 +60,6 @@ window.forceUploadAll = async () => {
 // --- HOOKS DATABASE (SINKRONISASI OTOMATIS) ---
 const setupHooks = (tableName) => {
     db[tableName].hook('creating', (pk, obj) => { 
-        // pk seringkali undefined saat creating jika auto-increment, 
-        // maka kita kirim obj.id setelah Dexie menyimpannya atau pk jika tersedia
         setTimeout(() => {
             const finalId = pk || obj.id;
             if (finalId) syncToCloud(tableName, finalId, obj);
@@ -70,8 +69,8 @@ const setupHooks = (tableName) => {
     db[tableName].hook('deleting', (pk) => { syncToCloud(tableName, pk, null); });
 };
 
-// Daftarkan semua tabel ke hooks
-const allTables = ['products', 'categories', 'transactions', 'members', 'expenses', 'digital_transactions'];
+// Daftarkan semua tabel ke hooks (Termasuk services)
+const allTables = ['products', 'categories', 'transactions', 'members', 'expenses', 'digital_transactions', 'services'];
 allTables.forEach(setupHooks);
 
 // --- FUNGSI SINKRONISASI MASUK (CLOUD -> LOCAL) ---
@@ -102,7 +101,6 @@ const syncFromCloud = () => {
 // --- HELPER LABA RUGI ---
 window.hitungLabaRugi = async (startDate, endDate) => {
     try {
-        // Ambil data dalam rentang waktu tertentu
         const semuaTransaksi = await db.transactions
             .where('date').between(startDate, endDate, true, true)
             .toArray();
@@ -124,7 +122,6 @@ window.hitungLabaRugi = async (startDate, endDate) => {
             count: semuaTransaksi.length + digitalTrans.length 
         };
 
-        // 1. Hitung Penjualan Produk (Retail)
         semuaTransaksi.forEach(tr => {
             stats.totalOmzet += Number(tr.total || 0);
             if (tr.items) {
@@ -132,24 +129,26 @@ window.hitungLabaRugi = async (startDate, endDate) => {
                     const qty = Number(item.qty || 0);
                     const modal = Number(item.price_modal || 0);
                     const jual = Number(item.price_sell || 0);
+                    
+                    // Logika Jasa: extraCharge dianggap 100% laba kotor 
+                    // karena tidak mengurangi stok fisik produk
+                    const extra = Number(item.extraCharge || 0);
+                    
                     stats.totalModal += (modal * qty);
-                    stats.totalLabaKotor += (jual - modal) * qty;
+                    stats.totalLabaKotor += ((jual - modal) + extra) * qty;
                 });
             }
         });
 
-        // 2. Tambahkan Laba dari Digital (Admin Fee)
         digitalTrans.forEach(dt => {
             stats.totalLabaKotor += Number(dt.profit || 0);
             stats.totalOmzet += Number(dt.adminFee || 0); 
         });
 
-        // 3. Hitung Pengeluaran Operasional
         semuaPengeluaran.forEach(ex => {
             stats.totalPengeluaran += Number(ex.amount || 0);
         });
 
-        // 4. Final: Laba Bersih = Laba Kotor - Pengeluaran
         stats.totalLabaBersih = stats.totalLabaKotor - stats.totalPengeluaran;
 
         return stats;
@@ -161,8 +160,9 @@ window.hitungLabaRugi = async (startDate, endDate) => {
 
 // --- EKSEKUSI ---
 db.open().then(() => {
-    console.log("Database SinarPagiDB v16 Aktif (Digital Service & Cloud Sync Ready)");
+    console.log("Database SinarPagiDB v17 Aktif (Service Table & Cloud Sync Integrated)");
     syncFromCloud(); 
 }).catch(err => {
     console.error("Koneksi Database Gagal:", err);
+    // Jika Error struktur (UpgradeError), reload bisa membantu atau hapus database jika dev
 });

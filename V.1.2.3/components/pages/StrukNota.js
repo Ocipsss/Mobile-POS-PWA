@@ -1,12 +1,9 @@
 // components/pages/StrukNota.js //
+// v2.4 - Shadow Service Integration for Receipt Printing //
+
 const StrukNota = {
     props: ['transaksi', 'settings'],
     setup(props) {
-        /**
-         * Logic:
-         * Mengambil pengaturan dari localStorage sebagai sumber utama.
-         * Data ini sudah terupdate otomatis dari Firebase saat user membuka tab Pengaturan.
-         */
         const localSettings = Vue.computed(() => {
             const saved = localStorage.getItem('sinar_pagi_settings');
             if (saved) {
@@ -16,7 +13,6 @@ const StrukNota = {
                     console.error("Format settings rusak:", e);
                 }
             }
-            // Fallback jika localStorage kosong
             return props.settings || {
                 storeName: 'SINAR PAGI',
                 address: 'Alamat Belum Diatur',
@@ -25,7 +21,12 @@ const StrukNota = {
             };
         });
 
-        return { localSettings };
+        // Fungsi pembantu untuk menghitung harga final per item (Harga Produk + Jasa)
+        const getFinalPrice = (item) => {
+            return item.price_sell + (item.extraCharge || 0);
+        };
+
+        return { localSettings, getFinalPrice };
     },
     template: `
     <div id="print-section" class="print-only">
@@ -51,8 +52,8 @@ const StrukNota = {
                 <div v-for="item in transaksi.items" :key="item.id" class="item-row">
                     <div class="item-name">{{ item.name.toUpperCase() }}</div>
                     <div class="item-details">
-                        <span>{{ item.qty }} x {{ item.price_sell.toLocaleString('id-ID') }}</span>
-                        <span class="text-right">{{ (item.qty * item.price_sell).toLocaleString('id-ID') }}</span>
+                        <span>{{ item.qty }} x {{ getFinalPrice(item).toLocaleString('id-ID') }}</span>
+                        <span class="text-right">{{ (item.qty * getFinalPrice(item)).toLocaleString('id-ID') }}</span>
                     </div>
                 </div>
             </div>

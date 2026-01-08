@@ -18,6 +18,7 @@ const app = createApp({
         'page-laba-rugi': window.PageLabaRugi, 
         'page-pengeluaran': PagePengeluaran,
         'page-transaksi': PageTransaksi, 
+        'page-data-jasa': PageDataJasa,
         'page-arus-uang': typeof PageArusUang !== 'undefined' ? PageArusUang : PlaceholderComponent,
         'page-digital-svc': typeof PageDigitalSvc !== 'undefined' ? PageDigitalSvc : PlaceholderComponent,
         'struk-nota': StrukNota, 
@@ -46,12 +47,14 @@ const app = createApp({
         const selectedMember = ref(null);
         const memberSearchQuery = ref(""); 
         const listMemberDB = ref([]);
+        const listJasaDB = ref([]); 
         const globalSearchQuery = ref(""); 
         const searchResults = ref([]);    
 
         const refreshData = async () => {
             menuGroupsData.value = window.menuGroups || [];
             listMemberDB.value = await db.members.toArray();
+            listJasaDB.value = await db.services.toArray();
         };
 
         const handleLogin = async () => {
@@ -138,7 +141,14 @@ const app = createApp({
             return !q ? listMemberDB.value : listMemberDB.value.filter(m => m.name.toLowerCase().includes(q) || m.id.toString().includes(q));
         });
 
-        const totalBayar = computed(() => cart.value.reduce((sum, item) => sum + (item.price_sell * item.qty), 0));
+        // UPDATE LOGIKA TOTAL: Menghitung Jasa secara terpisah dari Qty Produk
+        const totalBayar = computed(() => {
+            return cart.value.reduce((sum, item) => {
+                const totalProduk = item.price_sell * item.qty;
+                const totalJasa = (item.extraCharge || 0) * (item.extraChargeQty || 0);
+                return sum + totalProduk + totalJasa;
+            }, 0);
+        });
 
         const prosesBayar = () => {
             if (cart.value.length === 0) return;
@@ -191,6 +201,28 @@ const app = createApp({
             } catch (err) { alert("Error: " + err.message); }
         };
 
+        // UPDATE FUNGSI TAMBAH JASA: Memungkinkan kuantitas terpisah
+        const tambahJasa = (jasa) => {
+            if (cart.value.length === 0) {
+                alert("Pilih barangnya dulu (Kopi/Mie)!");
+                return;
+            }
+            const lastIndex = cart.value.length - 1;
+            const lastItem = cart.value[lastIndex];
+
+            // Set data jasa ke item terakhir
+            lastItem.extraCharge = jasa.price;
+            lastItem.extraChargeName = jasa.name;
+            // Default 1 jasa, bisa diubah di komponen PagePenjualan menggunakan tombol +/-
+            lastItem.extraChargeQty = lastItem.extraChargeQty || 1; 
+            
+            if (!lastItem.name.includes("(Seduh)")) {
+                lastItem.name = lastItem.name + " (Seduh)";
+            }
+
+            if (navigator.vibrate) navigator.vibrate(50);
+        };
+
         const cetakStrukTerakhir = () => {
             isSuccessModalOpen.value = false;
             setTimeout(() => window.print(), 500);
@@ -204,7 +236,6 @@ const app = createApp({
         };
 
         const addBySearch = (product) => {
-            // LOGIKA BARU: Jika di halaman Daftar Produk, kirim event untuk buka detail
             if (activePage.value === 'Daftar Produk') {
                 window.dispatchEvent(new CustomEvent('open-product-detail', { detail: product }));
                 globalSearchQuery.value = ""; searchResults.value = [];
@@ -212,11 +243,16 @@ const app = createApp({
             }
             
             const inCart = cart.value.find(item => item.id === product.id);
-            inCart ? inCart.qty++ : cart.value.push({ ...product, qty: 1 });
+            // Inisialisasi extraChargeQty ke 0 untuk produk baru
+            inCart ? inCart.qty++ : cart.value.push({ ...product, qty: 1, extraCharge: 0, extraChargeQty: 0 });
             globalSearchQuery.value = ""; searchResults.value = [];
         };
 
-        const selectPage = (name) => { isOpen.value = false; activePage.value = name; };
+        const selectPage = (name) => { 
+            isOpen.value = false; 
+            activePage.value = name; 
+            refreshData();
+        };
         
         const getComponent = (pageName) => {
             const map = {
@@ -225,6 +261,7 @@ const app = createApp({
                 'Kategori Produk': 'page-kategori', 
                 'Daftar Produk': 'page-daftar-produk',
                 'Data Member': 'page-data-member', 
+                'Data Jasa': 'page-data-jasa',
                 'Pengaturan': 'page-pengaturan',
                 'Laporan Harian': 'page-laporan-harian', 
                 'Stock Monitor': 'page-stock-monitor',
@@ -246,7 +283,8 @@ const app = createApp({
             menuGroups: menuGroupsData, isMemberModalOpen, selectedMember, 
             memberSearchQuery, filteredMembers, globalSearchQuery, searchResults, 
             handleGlobalSearch, addBySearch, isConfirmModalOpen, isSuccessModalOpen, 
-            eksekusiBayar, cetakStrukTerakhir, isScannerOpen, startScanner, stopScanner          
+            eksekusiBayar, cetakStrukTerakhir, isScannerOpen, startScanner, stopScanner,
+            tambahJasa, listJasaDB, refreshData          
         }
     }
 });
