@@ -7,6 +7,7 @@ root/:
       -ArusUang.js
       -DaftarProduk.js
       -Dashboard.js
+      -DataJasa.js
       -DataKasir.js
       -DataMember.js
       -DataSuplier.js
