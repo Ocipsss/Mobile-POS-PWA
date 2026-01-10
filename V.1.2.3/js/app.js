@@ -141,13 +141,16 @@ const app = createApp({
         html5QrCode = new Html5Qrcode("reader");
         
         const config = { 
-            fps: 20, 
-            qrbox: { width: 250, height: 150 },
-            // Gunakan video constraints dasar agar kamera mau terbuka dulu
-            videoConstraints: {
-                facingMode: "environment"
-            }
-        };
+    fps: 20, 
+    qrbox: { width: 250, height: 150 },
+    videoConstraints: {
+        facingMode: "environment",
+        // TAMBAHKAN INI: Meminta resolusi HD agar lebih tajam
+        width: { min: 640, ideal: 1280, max: 1920 },
+        height: { min: 480, ideal: 720, max: 1080 }
+    }
+};
+
 
         html5QrCode.start(
             { facingMode: "environment" },
