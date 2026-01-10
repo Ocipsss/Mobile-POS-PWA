@@ -84,7 +84,8 @@ const app = createApp({
                 }
             });
         });
-
+// start scanner v.1 //
+/*
         const startScanner = () => {
             isScannerOpen.value = true;
             setTimeout(() => {
@@ -124,6 +125,77 @@ const app = createApp({
                 });
             }, 300);
         };
+        */
+    // end start-scanner v.1 //
+    //////////////////////////
+    // startScanner v.2 //
+    const startScanner = () => {
+    isScannerOpen.value = true;
+    setTimeout(() => {
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start(
+            { facingMode: "environment" },
+            { 
+                fps: 20, // Meningkatkan FPS agar lebih responsif
+                qrbox: { width: 200, height: 120 }, // Kotak lebih kecil memaksa user menjauhkan HP (fokus lebih baik)
+                aspectRatio: 1.0
+            },
+            async (decodedText) => {
+                if (navigator.vibrate) navigator.vibrate(100);
+                
+                // Logika identifikasi halaman tetap sama
+                if (activePage.value === 'Daftar Produk') {
+                    window.dispatchEvent(new CustomEvent('barcode-scanned-edit', { detail: decodedText }));
+                    stopScanner();
+                } 
+                else if (activePage.value === 'Tambah Produk') {
+                    const inputBarcode = document.querySelector('input[placeholder="Scan atau manual..."]');
+                    if (inputBarcode) {
+                        inputBarcode.value = decodedText;
+                        inputBarcode.dispatchEvent(new Event('input', { bubbles: true }));
+                        stopScanner();
+                    }
+                } 
+                else {
+                    const product = await db.products.where('code').equals(decodedText).first();
+                    if (product) {
+                        addBySearch(product);
+                        stopScanner();
+                    } else {
+                        alert("Produk tidak ditemukan: " + decodedText);
+                        stopScanner();
+                    }
+                }
+            }
+        ).then(() => {
+            // --- FITUR TAMBAHAN: FLASH & ZOOM ---
+            const track = html5QrCode.getRunningTrack();
+            const capabilities = track.getCapabilities();
+
+            // 1. Aktifkan Lampu Flash (Jika HP mendukung)
+            if (capabilities.torch) {
+                track.applyConstraints({
+                    advanced: [{ torch: true }]
+                }).catch(err => console.warn("Gagal menyalakan flash:", err));
+            }
+
+            // 2. Aktifkan Auto Zoom (Untuk membantu jarak 10-15cm)
+            // Kita set ke 2x zoom agar user bisa scan dari jarak 25cm (jarak fokus aman)
+            // tapi barcode tetap terlihat besar di layar.
+            if (capabilities.zoom) {
+                const targetZoom = capabilities.zoom.min + 1.5; // Menambah zoom sedikit dari level min
+                track.applyConstraints({
+                    advanced: [{ zoom: Math.min(targetZoom, capabilities.zoom.max) }]
+                }).catch(err => console.warn("Gagal mengatur zoom:", err));
+            }
+        }).catch(err => {
+            console.error(err);
+            isScannerOpen.value = false;
+        });
+    }, 300);
+};
+
+    // end-startScanner v.2 //
 
         const stopScanner = () => {
             if (html5QrCode && html5QrCode.isScanning) {
