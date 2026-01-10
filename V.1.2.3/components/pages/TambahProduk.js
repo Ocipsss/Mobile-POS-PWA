@@ -86,29 +86,55 @@ const PageTambahProduk = {
         };
 
         const saveProduct = async () => {
-            if(!product.value.name || !product.value.price_sell) {
-                alert("Nama dan Harga Jual wajib diisi!");
-                return;
-            }
-            try {
-                const productData = JSON.parse(JSON.stringify(product.value));
-                const localId = await db.products.add(productData);
+    // 1. Validasi Input Dasar
+    if(!product.value.name || !product.value.price_sell) {
+        alert("Nama dan Harga Jual wajib diisi!");
+        return;
+    }
 
-                if (typeof fdb !== 'undefined') {
-                    await fdb.ref('products/' + localId).set({
-                        ...productData,
-                        id: localId,
-                        updatedAt: new Date().toISOString()
-                    });
-                }
+    try {
+        // 2. CEK DUPLIKASI KODE PRODUK
+        // Kita hanya cek jika kode tidak kosong
+        if (product.value.code) {
+            const existingProduct = await db.products
+                .where('code')
+                .equals(product.value.code)
+                .first();
 
-                alert("Produk Berhasil Disimpan!");
-                product.value = { image: null, name: '', code: '', category: 'Umum', unit: 'pcs', price_modal: 0, price_sell: 0, qty: 0, pack_price: 0, pack_size: 1 };
-                displayModal.value = ""; displaySell.value = ""; displayPack.value = "";
-            } catch (err) { 
-                alert("Gagal menyimpan: " + err.message); 
+            if (existingProduct) {
+                alert(`Gagal! Produk dengan kode "${product.value.code}" sudah terdaftar (Nama: ${existingProduct.name}).`);
+                return; // Berhenti di sini, tidak lanjut menyimpan
             }
+        }
+
+        // 3. Jika lolos pengecekan, lanjutkan simpan
+        const productData = JSON.parse(JSON.stringify(product.value));
+        const localId = await db.products.add(productData);
+
+        if (typeof fdb !== 'undefined') {
+            await fdb.ref('products/' + localId).set({
+                ...productData,
+                id: localId,
+                updatedAt: new Date().toISOString()
+            });
+        }
+
+        alert("Produk Berhasil Disimpan!");
+        
+        // Reset Form
+        product.value = { 
+            image: null, name: '', code: '', category: 'Umum', 
+            unit: 'pcs', price_modal: 0, price_sell: 0, qty: 0, 
+            pack_price: 0, pack_size: 1 
         };
+        displayModal.value = ""; 
+        displaySell.value = ""; 
+        displayPack.value = "";
+
+    } catch (err) { 
+        alert("Gagal menyimpan: " + err.message); 
+    }
+};
 
         Vue.onMounted(loadCategories);
 
