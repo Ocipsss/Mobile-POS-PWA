@@ -131,19 +131,30 @@ const app = createApp({
     // startScanner v.2 //
     const startScanner = () => {
     isScannerOpen.value = true;
+    
+    // Pastikan instansi sebelumnya dibersihkan
+    if (html5QrCode) {
+        html5QrCode.clear();
+    }
+
     setTimeout(() => {
         html5QrCode = new Html5Qrcode("reader");
+        
+        const config = { 
+            fps: 20, 
+            qrbox: { width: 250, height: 150 },
+            // Gunakan video constraints dasar agar kamera mau terbuka dulu
+            videoConstraints: {
+                facingMode: "environment"
+            }
+        };
+
         html5QrCode.start(
             { facingMode: "environment" },
-            { 
-                fps: 20, // Meningkatkan FPS agar lebih responsif
-                qrbox: { width: 200, height: 120 }, // Kotak lebih kecil memaksa user menjauhkan HP (fokus lebih baik)
-                aspectRatio: 1.0
-            },
+            config,
             async (decodedText) => {
                 if (navigator.vibrate) navigator.vibrate(100);
                 
-                // Logika identifikasi halaman tetap sama
                 if (activePage.value === 'Daftar Produk') {
                     window.dispatchEvent(new CustomEvent('barcode-scanned-edit', { detail: decodedText }));
                     stopScanner();
@@ -168,32 +179,41 @@ const app = createApp({
                 }
             }
         ).then(() => {
-            // --- FITUR TAMBAHAN: FLASH & ZOOM ---
-            const track = html5QrCode.getRunningTrack();
-            const capabilities = track.getCapabilities();
+            // BERHASIL TERBUKA - Baru kita coba akses fiturnya
+            try {
+                const track = html5QrCode.getRunningTrack();
+                if (track) {
+                    const capabilities = track.getCapabilities();
+                    const constraints = { advanced: [] };
 
-            // 1. Aktifkan Lampu Flash (Jika HP mendukung)
-            if (capabilities.torch) {
-                track.applyConstraints({
-                    advanced: [{ torch: true }]
-                }).catch(err => console.warn("Gagal menyalakan flash:", err));
-            }
+                    // 1. Cek & Tambahkan Flash (Torch)
+                    if (capabilities.torch) {
+                        constraints.advanced.push({ torch: true });
+                    }
 
-            // 2. Aktifkan Auto Zoom (Untuk membantu jarak 10-15cm)
-            // Kita set ke 2x zoom agar user bisa scan dari jarak 25cm (jarak fokus aman)
-            // tapi barcode tetap terlihat besar di layar.
-            if (capabilities.zoom) {
-                const targetZoom = capabilities.zoom.min + 1.5; // Menambah zoom sedikit dari level min
-                track.applyConstraints({
-                    advanced: [{ zoom: Math.min(targetZoom, capabilities.zoom.max) }]
-                }).catch(err => console.warn("Gagal mengatur zoom:", err));
+                    // 2. Cek & Tambahkan Zoom (Coba zoom 2x)
+                    if (capabilities.zoom) {
+                        // Pilih nilai zoom tengah antara min dan max
+                        const zoomValue = Math.min(capabilities.zoom.min + 1, capabilities.zoom.max);
+                        constraints.advanced.push({ zoom: zoomValue });
+                    }
+
+                    // Terapkan jika ada fitur yang didukung
+                    if (constraints.advanced.length > 0) {
+                        track.applyConstraints(constraints).catch(e => console.log("Constraint error:", e));
+                    }
+                }
+            } catch (err) {
+                console.warn("Fitur hardware tidak didukung browser:", err);
             }
         }).catch(err => {
-            console.error(err);
+            console.error("Gagal buka kamera:", err);
+            alert("Kamera gagal terbuka. Pastikan izin kamera diberikan.");
             isScannerOpen.value = false;
         });
-    }, 300);
+    }, 500); // Naikkan delay sedikit agar DOM 'reader' benar-benar siap
 };
+
 
     // end-startScanner v.2 //
 
