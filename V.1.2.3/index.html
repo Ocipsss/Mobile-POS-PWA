@@ -59,8 +59,7 @@
 
     <div v-else>
         <sidebar-nav :groups="menuGroups" :active-page="activePage" @select-page="selectPage"></sidebar-nav>
-        <struk-nota v-if="lastTransaction" :transaksi="lastTransaction" :settings="storeSettings"></struk-nota>
-
+<struk-nota :transaksi="lastTransaction" :settings="storeSettings"></struk-nota>
         <div class="main-card" :class="{ 'is-open': isOpen }" @click="isOpen ? isOpen = false : null">
             <header class="flex flex-col gap-3 pb-4">
                 <div class="flex justify-between items-center w-full">

@@ -319,9 +319,15 @@ const app = createApp({
         };
 
         const cetakStrukTerakhir = () => {
-            isSuccessModalOpen.value = false;
-            setTimeout(() => window.print(), 500);
-        };
+    isSuccessModalOpen.value = false;
+    if (lastTransaction.value) {
+        // Gunakan event yang sama dengan reprint agar konsisten
+        window.dispatchEvent(new CustomEvent('print-struk', { 
+            detail: JSON.parse(JSON.stringify(lastTransaction.value)) 
+        }));
+    }
+};
+
 
         const handleGlobalSearch = async () => {
             if (!globalSearchQuery.value) { searchResults.value = []; return; }

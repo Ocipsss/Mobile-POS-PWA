@@ -3,6 +3,7 @@
 const StrukNota = {
     props: ['transaksi', 'settings'],
     setup(props) {
+        // State internal untuk menangani data reprint
         const reprintData = Vue.ref(null);
 
         const localSettings = Vue.computed(() => {
@@ -22,35 +23,40 @@ const StrukNota = {
             };
         });
 
+        // Tentukan data yang aktif secara reaktif
         const currentData = Vue.computed(() => {
             return reprintData.value || props.transaksi;
         });
 
         const getFinalPrice = (item) => {
-            return item.price_sell + (item.extraCharge || 0);
+            return (item.price_sell || 0) + (item.extraCharge || 0);
         };
 
-        const handlePrint = async (data) => {
-            console.log("Memulai proses cetak ulang...");
+        // FUNGSI INTI: Memastikan data ter-render sebelum diprint
+        const prepareAndPrint = async (data) => {
+            console.log("Menyiapkan data untuk preview...", data);
+            
+            // 1. Masukkan data ke ref agar template terisi
             reprintData.value = data;
             
-            // Tunggu render DOM selesai
+            // 2. Tunggu siklus render Vue (DOM Update)
             await Vue.nextTick();
             
-            // Jeda 500ms untuk memastikan sinkronisasi browser
+            // 3. Tambahan jeda 500ms agar browser benar-benar selesai menggambar layout
             setTimeout(() => {
                 window.print();
-                // Bersihkan data setelah print selesai
+                
+                // 4. Bersihkan setelah 1 detik
                 setTimeout(() => {
                     reprintData.value = null;
-                }, 2000);
+                }, 1000);
             }, 500);
         };
 
         Vue.onMounted(() => {
-            console.log("StrukNota terpasang, mendengarkan sinyal printer...");
+            console.log("StrukNota Listener: Aktif");
             window.addEventListener('print-struk', (event) => {
-                handlePrint(event.detail);
+                prepareAndPrint(event.detail);
             });
         });
 
@@ -58,62 +64,65 @@ const StrukNota = {
     },
     template: `
     <div id="print-section" class="print-only">
-        
-        <div v-if="currentData" class="struk-wrapper">
+        <div v-if="currentData" :key="currentData.id" class="struk-wrapper">
             <div class="struk-header">
-                <h2 class="store-name">{{ localSettings.storeName }}</h2>
-                <p class="store-address">{{ localSettings.address }}</p>
-                <p class="store-phone" v-if="localSettings.phone">{{ localSettings.phone }}</p>
+                <h2 class="store-name" style="font-size: 16px; font-weight: bold; text-align: center; margin: 0;">{{ localSettings.storeName }}</h2>
+                <p class="store-address" style="font-size: 10px; text-align: center; margin: 0;">{{ localSettings.address }}</p>
+                <p class="store-phone" v-if="localSettings.phone" style="font-size: 10px; text-align: center; margin: 0;">{{ localSettings.phone }}</p>
             </div>
             
-            <div class="struk-divider">--------------------------------</div>
+            <div class="struk-divider" style="text-align: center; margin: 5px 0;">--------------------------------</div>
             
-            <div class="struk-info">
-                <span>No: #{{ currentData.id.toString().slice(-5) }}</span>
-                <span class="text-right">{{ new Date(currentData.date).toLocaleDateString('id-ID') }}</span>
-                <span>Kasir: {{ currentData.kasir || 'Admin' }}</span>
-                <span class="text-right">{{ new Date(currentData.date).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'}) }}</span>
+            <div class="struk-info" style="font-size: 10px; display: flex; flex-direction: column;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>No: #{{ currentData.id.toString().slice(-5) }}</span>
+                    <span>{{ new Date(currentData.date).toLocaleDateString('id-ID') }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Kasir: {{ currentData.kasir || 'Admin' }}</span>
+                    <span>{{ new Date(currentData.date).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'}) }}</span>
+                </div>
             </div>
 
-            <div class="struk-divider">--------------------------------</div>
+            <div class="struk-divider" style="text-align: center; margin: 5px 0;">--------------------------------</div>
 
             <div class="struk-items">
-                <div v-for="item in currentData.items" :key="item.id" class="item-row">
-                    <div class="item-name">{{ item.name.toUpperCase() }}</div>
-                    <div class="item-details">
+                <div v-for="(item, index) in currentData.items" :key="index" style="margin-bottom: 8px;">
+                    <div class="item-name" style="font-size: 11px; font-weight: bold; text-transform: uppercase;">{{ item.name }}</div>
+                    <div class="item-details" style="display: flex; justify-content: space-between; font-size: 11px;">
                         <span>{{ item.qty }} x {{ getFinalPrice(item).toLocaleString('id-ID') }}</span>
-                        <span class="text-right">{{ (item.qty * getFinalPrice(item)).toLocaleString('id-ID') }}</span>
+                        <span>{{ (item.qty * getFinalPrice(item)).toLocaleString('id-ID') }}</span>
                     </div>
                 </div>
             </div>
 
-            <div class="struk-divider">--------------------------------</div>
+            <div class="struk-divider" style="text-align: center; margin: 5px 0;">--------------------------------</div>
 
-            <div class="struk-total">
-                <div class="total-row">
+            <div class="struk-total" style="font-size: 12px; font-weight: bold;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
                     <span>TOTAL</span>
-                    <span class="text-right">Rp {{ currentData.total.toLocaleString('id-ID') }}</span>
+                    <span>Rp {{ (currentData.total || 0).toLocaleString('id-ID') }}</span>
                 </div>
-                <div class="total-row" v-if="currentData.paymentMethod === 'cash'">
+                <div v-if="currentData.paymentMethod === 'cash'" style="display: flex; justify-content: space-between; margin-bottom: 2px;">
                     <span>BAYAR</span>
-                    <span class="text-right">Rp {{ (currentData.amountPaid || 0).toLocaleString('id-ID') }}</span>
+                    <span>Rp {{ (currentData.amountPaid || 0).toLocaleString('id-ID') }}</span>
                 </div>
-                <div class="total-row" v-if="currentData.paymentMethod === 'cash'" style="font-weight: bold;">
+                <div v-if="currentData.paymentMethod === 'cash'" style="display: flex; justify-content: space-between;">
                     <span>KEMBALI</span>
-                    <span class="text-right">Rp {{ (currentData.change || 0).toLocaleString('id-ID') }}</span>
+                    <span>Rp {{ (currentData.change || 0).toLocaleString('id-ID') }}</span>
                 </div>
-                <div class="total-row" v-else>
+                <div v-else style="display: flex; justify-content: space-between;">
                     <span>METODE</span>
-                    <span class="text-right uppercase">{{ currentData.paymentMethod }}</span>
+                    <span style="text-transform: uppercase;">{{ currentData.paymentMethod }}</span>
                 </div>
             </div>
 
-            <div class="struk-divider">--------------------------------</div>
+            <div class="struk-divider" style="text-align: center; margin: 5px 0;">--------------------------------</div>
             
-            <div class="struk-footer">
-                <p>{{ localSettings.footerNote }}</p>
+            <div class="struk-footer" style="text-align: center; font-size: 10px; margin-top: 10px;">
+                <p style="margin: 0;">{{ localSettings.footerNote }}</p>
                 <p style="font-size: 8px; margin-top: 4px;">Barang yang sudah dibeli tidak dapat ditukar/dikembalikan</p>
-                <p v-if="reprintData" style="font-size: 8px; margin-top: 5px; font-weight: bold; border-top: 1px dashed #ccc; padding-top: 3px;">
+                <p v-if="reprintData" style="font-size: 8px; margin-top: 5px; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px;">
                     ** SALINAN NOTA (REPRINT) **
                 </p>
             </div>
