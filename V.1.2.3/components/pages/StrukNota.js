@@ -1,13 +1,19 @@
+// components/pages/StrukNota.js //
+
 const StrukNota = {
     props: ['transaksi', 'settings'],
     setup(props) {
-        // State tambahan untuk menampung data reprint
+        // State internal untuk menangani data reprint
         const reprintData = Vue.ref(null);
 
         const localSettings = Vue.computed(() => {
             const saved = localStorage.getItem('sinar_pagi_settings');
             if (saved) {
-                try { return JSON.parse(saved); } catch (e) { console.error(e); }
+                try {
+                    return JSON.parse(saved);
+                } catch (e) {
+                    console.error("Format settings rusak:", e);
+                }
             }
             return props.settings || {
                 storeName: 'SINAR PAGI',
@@ -17,8 +23,7 @@ const StrukNota = {
             };
         });
 
-        // Computed property untuk menentukan data mana yang akan ditampilkan
-        // Jika ada data reprint, gunakan itu. Jika tidak, gunakan props transaksi.
+        // Tentukan data yang aktif: data reprint diutamakan, jika kosong gunakan props transaksi
         const currentData = Vue.computed(() => {
             return reprintData.value || props.transaksi;
         });
@@ -27,24 +32,30 @@ const StrukNota = {
             return item.price_sell + (item.extraCharge || 0);
         };
 
-        // Logika menangkap event reprint
+        // Pasang listener untuk menangkap event 'print-struk' dari Riwayat Transaksi
         Vue.onMounted(() => {
-            window.addEventListener('print-struk', (event) => {
+            window.addEventListener('print-struk', async (event) => {
+                console.log("Menerima data reprint:", event.detail);
+                
+                // 1. Set data ke state reaktif
                 reprintData.value = event.detail;
                 
-                // Beri waktu sedikit agar DOM terupdate dengan data baru, lalu cetak
-                Vue.nextTick(() => {
+                // 2. Beri jeda agar Vue memperbarui DOM dengan data transaksi baru
+                await Vue.nextTick();
+                
+                // 3. Beri sedikit jeda tambahan (500ms) untuk memastikan render selesai sepenuhnya
+                setTimeout(() => {
                     window.print();
                     
-                    // Opsional: Reset kembali setelah print selesai agar tidak nyangkut
+                    // 4. Setelah dialog print muncul/selesai, bersihkan data reprint
                     setTimeout(() => {
                         reprintData.value = null;
                     }, 1000);
-                });
+                }, 500);
             });
         });
 
-        return { localSettings, getFinalPrice, currentData };
+        return { localSettings, getFinalPrice, currentData, reprintData };
     },
     template: `
     <div v-if="currentData" id="print-section" class="print-only">
@@ -102,7 +113,9 @@ const StrukNota = {
             <div class="struk-footer">
                 <p>{{ localSettings.footerNote }}</p>
                 <p style="font-size: 8px; margin-top: 4px;">Barang yang sudah dibeli tidak dapat ditukar/dikembalikan</p>
-                <p v-if="currentData" style="font-size: 7px; margin-top: 2dp; color: #888;">** CETAK ULANG **</p>
+                <p v-if="reprintData" style="font-size: 8px; margin-top: 5px; font-weight: bold; border-top: 1px dashed #ccc; padding-top: 3px;">
+                    ** SALINAN NOTA (REPRINT) **
+                </p>
             </div>
         </div>
     </div>
