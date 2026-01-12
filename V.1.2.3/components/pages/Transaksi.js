@@ -16,16 +16,16 @@ const PageTransaksi = {
             }
         };
 
-        // Fungsi Cetak Ulang
+        // Fungsi Cetak Ulang (Reprint)
         const reprint = (transaksi) => {
-            // Kita memanfaatkan Global State/Event Bus atau cara yang sama 
-            // saat Anda melakukan cetak pertama kali di Penjualan.js
-            // Asumsi: Kita mengirim data ke komponen StrukNota melalui event atau state global
+            if (!transaksi) return;
             
             if (window.confirm(`Cetak ulang nota #${transaksi.id.toString().slice(-5)}?`)) {
-                // Trigger event cetak global (pastikan StrukNota mendengarkan data ini)
+                console.log("Mengirim data ke printer...", transaksi);
+                // Menggunakan JSON parse/stringify agar data menjadi objek bersih (decoupling)
+                const dataBersih = JSON.parse(JSON.stringify(transaksi));
                 window.dispatchEvent(new CustomEvent('print-struk', { 
-                    detail: JSON.parse(JSON.stringify(transaksi)) 
+                    detail: dataBersih 
                 }));
             }
         };

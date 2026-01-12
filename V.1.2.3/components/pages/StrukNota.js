@@ -3,7 +3,6 @@
 const StrukNota = {
     props: ['transaksi', 'settings'],
     setup(props) {
-        // State internal untuk menangani data reprint
         const reprintData = Vue.ref(null);
 
         const localSettings = Vue.computed(() => {
@@ -23,7 +22,6 @@ const StrukNota = {
             };
         });
 
-        // Tentukan data yang aktif: data reprint diutamakan, jika kosong gunakan props transaksi
         const currentData = Vue.computed(() => {
             return reprintData.value || props.transaksi;
         });
@@ -32,34 +30,36 @@ const StrukNota = {
             return item.price_sell + (item.extraCharge || 0);
         };
 
-        // Pasang listener untuk menangkap event 'print-struk' dari Riwayat Transaksi
-        Vue.onMounted(() => {
-            window.addEventListener('print-struk', async (event) => {
-                console.log("Menerima data reprint:", event.detail);
-                
-                // 1. Set data ke state reaktif
-                reprintData.value = event.detail;
-                
-                // 2. Beri jeda agar Vue memperbarui DOM dengan data transaksi baru
-                await Vue.nextTick();
-                
-                // 3. Beri sedikit jeda tambahan (500ms) untuk memastikan render selesai sepenuhnya
+        const handlePrint = async (data) => {
+            console.log("Memulai proses cetak ulang...");
+            reprintData.value = data;
+            
+            // Tunggu render DOM selesai
+            await Vue.nextTick();
+            
+            // Jeda 500ms untuk memastikan sinkronisasi browser
+            setTimeout(() => {
+                window.print();
+                // Bersihkan data setelah print selesai
                 setTimeout(() => {
-                    window.print();
-                    
-                    // 4. Setelah dialog print muncul/selesai, bersihkan data reprint
-                    setTimeout(() => {
-                        reprintData.value = null;
-                    }, 1000);
-                }, 500);
+                    reprintData.value = null;
+                }, 2000);
+            }, 500);
+        };
+
+        Vue.onMounted(() => {
+            console.log("StrukNota terpasang, mendengarkan sinyal printer...");
+            window.addEventListener('print-struk', (event) => {
+                handlePrint(event.detail);
             });
         });
 
         return { localSettings, getFinalPrice, currentData, reprintData };
     },
     template: `
-    <div v-if="currentData" id="print-section" class="print-only">
-        <div class="struk-wrapper">
+    <div id="print-section" class="print-only">
+        
+        <div v-if="currentData" class="struk-wrapper">
             <div class="struk-header">
                 <h2 class="store-name">{{ localSettings.storeName }}</h2>
                 <p class="store-address">{{ localSettings.address }}</p>
