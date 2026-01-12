@@ -1,20 +1,32 @@
-// components/pages/Transaksi.js //
 const PageTransaksi = {
     setup() {
         const transactions = Vue.ref([]);
         const isLoading = Vue.ref(false);
-        const editingId = Vue.ref(null); // Menyimpan ID transaksi yang sedang diedit
+        const editingId = Vue.ref(null);
 
         const loadTransactions = async () => {
             isLoading.value = true;
             try {
-                // Ambil data transaksi terbaru (limit 50)
                 const data = await db.transactions.orderBy('date').reverse().limit(50).toArray();
                 transactions.value = data;
             } catch (err) {
                 console.error(err);
             } finally {
                 setTimeout(() => { isLoading.value = false; }, 300);
+            }
+        };
+
+        // Fungsi Cetak Ulang
+        const reprint = (transaksi) => {
+            // Kita memanfaatkan Global State/Event Bus atau cara yang sama 
+            // saat Anda melakukan cetak pertama kali di Penjualan.js
+            // Asumsi: Kita mengirim data ke komponen StrukNota melalui event atau state global
+            
+            if (window.confirm(`Cetak ulang nota #${transaksi.id.toString().slice(-5)}?`)) {
+                // Trigger event cetak global (pastikan StrukNota mendengarkan data ini)
+                window.dispatchEvent(new CustomEvent('print-struk', { 
+                    detail: JSON.parse(JSON.stringify(transaksi)) 
+                }));
             }
         };
 
@@ -43,7 +55,11 @@ const PageTransaksi = {
         
         Vue.onMounted(loadTransactions);
 
-        return { transactions, isLoading, editingId, updateStatus, updatePayment, hapusTransaksi, formatR, loadTransactions };
+        return { 
+            transactions, isLoading, editingId, 
+            updateStatus, updatePayment, hapusTransaksi, 
+            formatR, loadTransactions, reprint 
+        };
     },
     template: `
     <div class="w-full flex flex-col gap-5 py-2 animate-zoom-in no-scrollbar px-1 pb-28">
@@ -77,10 +93,16 @@ const PageTransaksi = {
                     </div>
                     <div class="text-right">
                         <div class="text-[13px] font-black text-gray-900 mb-1">{{ formatR(t.total) }}</div>
-                        <button @click="editingId = (editingId === t.id ? null : t.id)" 
-                                class="text-[8px] font-black px-2 py-1 rounded bg-gray-100 text-gray-500 uppercase">
-                                {{ editingId === t.id ? 'Tutup' : 'Edit' }}
-                        </button>
+                        <div class="flex gap-2 justify-end">
+                            <button @click="reprint(t)" 
+                                    class="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 active:scale-90">
+                                <i class="ri-printer-line text-xs"></i>
+                            </button>
+                            <button @click="editingId = (editingId === t.id ? null : t.id)" 
+                                    class="text-[8px] font-black px-2 py-1 rounded bg-gray-100 text-gray-500 uppercase">
+                                    {{ editingId === t.id ? 'Tutup' : 'Edit' }}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
