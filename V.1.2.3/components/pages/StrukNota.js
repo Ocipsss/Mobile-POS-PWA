@@ -33,25 +33,26 @@ const StrukNota = {
         };
 
         // FUNGSI INTI: Memastikan data ter-render sebelum diprint
-        const prepareAndPrint = async (data) => {
-            console.log("Menyiapkan data untuk preview...", data);
-            
-            // 1. Masukkan data ke ref agar template terisi
-            reprintData.value = data;
-            
-            // 2. Tunggu siklus render Vue (DOM Update)
-            await Vue.nextTick();
-            
-            // 3. Tambahan jeda 500ms agar browser benar-benar selesai menggambar layout
-            setTimeout(() => {
-                window.print();
-                
-                // 4. Bersihkan setelah 1 detik
-                setTimeout(() => {
-                    reprintData.value = null;
-                }, 1000);
-            }, 500);
-        };
+       const prepareAndPrint = async (data) => {
+    console.log("Menyiapkan data struk...", data);
+    
+    // 1. Masukkan data
+    reprintData.value = data;
+    
+    // 2. Tunggu Vue selesai mengupdate DOM
+    await Vue.nextTick();
+    
+    // 3. Jeda 800ms (Kritikal untuk PDF/Mobile agar tidak kosong)
+    setTimeout(() => {
+        window.print();
+        
+        // 4. Bersihkan data setelah 1.5 detik (setelah dialog print muncul)
+        setTimeout(() => {
+            reprintData.value = null;
+        }, 1500);
+    }, 800); 
+};
+
 
         Vue.onMounted(() => {
             console.log("StrukNota Listener: Aktif");

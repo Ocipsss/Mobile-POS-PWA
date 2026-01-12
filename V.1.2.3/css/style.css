@@ -142,33 +142,38 @@ header {
 }
 
 /* 8. PRINT SYSTEM (Optimized for 58mm Thermal) */
+/* 8. PRINT SYSTEM */
 .print-only { 
     display: none; 
 }
 
 @media print {
-    /* Sembunyikan elemen UI agar tidak boros kertas */
-    body, .main-card, header, .content-scroll, .back-menu, nav, button:not(.print-only) { 
-        display: none !important; 
+    /* Sembunyikan SEMUA elemen di layar */
+    body * { 
+        visibility: hidden; 
     }
 
-    .print-only {
+    /* Tampilkan KEMBALI hanya area struk dan semua anaknya */
+    #print-section, #print-section * { 
+        visibility: visible !important; 
+    }
+
+    /* Atur posisi struk ke pojok kiri atas kertas */
+    #print-section {
         display: block !important;
         position: absolute;
         left: 0;
         top: 0;
-        width: 100%;
+        width: 58mm;
         background: white;
+        padding: 0;
+        margin: 0;
     }
 
-    @page { 
-        size: 58mm auto; 
-        margin: 0; 
-    }
-
+    /* --- SEMUA STYLE STRUK HARUS DI DALAM KURUNG KURAWAL @MEDIA PRINT --- */
     .struk-wrapper {
-        width: 52mm; /* Lebar optimal area cetak */
-        margin: 0 auto;
+        width: 52mm !important;
+        margin: 0 auto !important;
         padding: 2mm;
         font-family: 'Courier New', Courier, monospace;
         font-size: 11px;
@@ -202,18 +207,9 @@ header {
 
     .struk-info {
         display: flex;
-        flex-wrap: wrap;
-        justify-content: space-between;
+        flex-direction: column; /* Pastikan kolom agar tidak berantakan */
         font-size: 10px;
         margin-bottom: 5px;
-    }
-
-    .struk-info span {
-        width: 50%;
-    }
-
-    .item-row {
-        margin-bottom: 6px;
     }
 
     .item-name {
@@ -233,16 +229,6 @@ header {
         padding-top: 5px;
     }
 
-    .total-row {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 2px;
-    }
-
-    .text-right { 
-        text-align: right; 
-    }
-
     .struk-footer {
         text-align: center;
         margin-top: 15px;
@@ -250,4 +236,9 @@ header {
         border-top: 1px dashed #000;
         padding-top: 5px;
     }
-}
+
+    @page { 
+        size: 58mm auto; 
+        margin: 0; 
+    }
+} /* <--- PENUTUP @MEDIA PRINT HARUS DI SINI */
