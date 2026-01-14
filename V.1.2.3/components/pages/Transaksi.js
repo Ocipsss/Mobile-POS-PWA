@@ -18,17 +18,18 @@ const PageTransaksi = {
 
         // Fungsi Cetak Ulang (Reprint)
         const reprint = (transaksi) => {
-            if (!transaksi) return;
-            
-            if (window.confirm(`Cetak ulang nota #${transaksi.id.toString().slice(-5)}?`)) {
-                console.log("Mengirim data ke printer...", transaksi);
-                // Menggunakan JSON parse/stringify agar data menjadi objek bersih (decoupling)
-                const dataBersih = JSON.parse(JSON.stringify(transaksi));
-                window.dispatchEvent(new CustomEvent('print-struk', { 
-                    detail: dataBersih 
-                }));
-            }
-        };
+    if (!transaksi) return;
+    
+    // Hilangkan confirm agar lebih cepat, atau biarkan jika Anda suka
+    console.log("Mengirim data ke printer Bluetooth...", transaksi);
+    const dataBersih = JSON.parse(JSON.stringify(transaksi));
+    
+    // Kirim event yang akan ditangkap oleh StrukNota.js
+    window.dispatchEvent(new CustomEvent('print-struk', { 
+        detail: dataBersih 
+    }));
+};
+
 
         const updateStatus = async (id, newStatus) => {
             try {

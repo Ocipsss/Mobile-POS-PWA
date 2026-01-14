@@ -1,5 +1,5 @@
 const StrukNota = {
-    props: ['transaksi', 'settings'],
+    props: ['transaksi', 'settings', 'printerCharacteristic'],
     setup(props) {
         const reprintData = Vue.ref(null);
 
@@ -22,26 +22,90 @@ const StrukNota = {
             return (Number(item.price_sell) || 0) + (Number(item.extraCharge) || 0);
         };
 
+        // --- FUNGSI CETAK BLUETOOTH (ESC/POS) ---
+        const printBluetooth = async (data) => {
+    if (!props.printerCharacteristic) return false;
+
+    try {
+        const encoder = new EscPosEncoder();
+        let result = encoder
+            .initialize()
+            .align('center')
+            .line(localSettings.value.storeName)
+            .line(localSettings.value.address)
+            .line('-'.repeat(32))
+            .align('left')
+            .line(`Nota: #${data.id.toString().slice(-5)}`)
+            .line(`Tgl : ${new Date(data.date).toLocaleDateString('id-ID')}`)
+            .line('-'.repeat(32));
+
+        data.items.forEach(item => {
+            result.line(item.name.toUpperCase());
+            const detail = `${item.qty}x${getFinalPrice(item).toLocaleString()}`;
+            const subtotal = (item.qty * getFinalPrice(item)).toLocaleString();
+            result.line(detail.padEnd(20) + subtotal.padStart(12));
+        });
+
+        result.line('-'.repeat(32))
+            .align('right')
+            .line(`TOTAL: ${data.total.toLocaleString()}`)
+            .align('center')
+            .newline()
+            .line(localSettings.value.footerNote)
+            .newline()
+            .newline()
+            .cut()
+            .encode();
+
+                // --- LOGIKA PENGIRIMAN UNTUK VSC ---
+        const fullData = result.encode();
+        const chunkSize = 20; 
+        
+        for (let i = 0; i < fullData.length; i += chunkSize) {
+            const chunk = fullData.slice(i, i + chunkSize);
+            
+            // Coba gunakan Write Without Response agar lebih cepat & lancar
+            if (props.printerCharacteristic.properties.writeWithoutResponse) {
+                await props.printerCharacteristic.writeValueWithoutResponse(chunk);
+            } else {
+                await props.printerCharacteristic.writeValue(chunk);
+            }
+            
+            // Jeda 30ms (VSC butuh waktu memproses buffer)
+            await new Promise(resolve => setTimeout(resolve, 30));
+        }
+
+
+        return true;
+    } catch (err) {
+        console.error("Gagal kirim data:", err);
+        return false;
+    }
+};
+
+
         const prepareAndPrint = async (data) => {
-            console.log("Memproses Struk...");
             reprintData.value = data;
             
-            // Tunggu DOM selesai dibuat oleh Vue
-            await Vue.nextTick();
+            // 1. Coba cetak ke Bluetooth dulu
+            const isBtSuccess = await printBluetooth(data);
             
-            // Jeda tambahan 500ms untuk memastikan font dan layout stabil di mobile
-            setTimeout(() => {
-                try {
-                    window.print();
-                } catch (e) {
-                    alert("Gagal memanggil fungsi cetak: " + e.message);
-                }
-                
-                // Bersihkan data setelah dialog print muncul (jeda 2 detik)
+            // 2. Jika bluetooth gagal/tidak ada, baru lari ke window.print (Struk layar)
+            if (!isBtSuccess) {
+                await Vue.nextTick();
                 setTimeout(() => {
-                    reprintData.value = null;
-                }, 2000);
-            }, 500);
+                    try {
+                        window.print();
+                    } catch (e) {
+                        alert("Gagal memanggil fungsi cetak: " + e.message);
+                    }
+                }, 500);
+            }
+
+            // Bersihkan data setelah selesai
+            setTimeout(() => {
+                reprintData.value = null;
+            }, 3000);
         };
 
         Vue.onMounted(() => {
@@ -54,7 +118,7 @@ const StrukNota = {
     },
     template: `
     <div id="print-section" class="print-only">
-        <div v-if="currentData" class="struk-wrapper" style="width: 52mm; margin: 0 auto; font-family: 'Courier New', monospace; color: #000;">
+        <div v-if="currentData" class="struk-wrapper" style="width: 52mm; margin: 0 auto; font-family: 'Courier New', monospace; color: #000; padding: 10px;">
             <div style="text-align: center; margin-bottom: 10px;">
                 <div style="font-size: 16px; font-weight: bold; text-transform: uppercase;">{{ localSettings.storeName }}</div>
                 <div style="font-size: 10px;">{{ localSettings.address }}</div>

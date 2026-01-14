@@ -51,6 +51,10 @@ const app = createApp({
         const globalSearchQuery = ref(""); 
         const searchResults = ref([]);    
 
+        // --- STATE BLUETOOTH PRINTER ---
+        const printerCharacteristic = ref(null);
+        const isPrinterConnected = ref(false);
+
         const refreshData = async () => {
             menuGroupsData.value = window.menuGroups || [];
             listMemberDB.value = await db.members.toArray();
@@ -70,6 +74,52 @@ const app = createApp({
             if (confirm("Keluar dari sistem?")) firebase.auth().signOut();
         };
 
+        // --- FUNGSI KONEKSI PRINTER ---
+        const connectPrinter = async () => {
+    try {
+        const device = await navigator.bluetooth.requestDevice({
+            // Cari perangkat yang memiliki nama 'VSC' atau munculkan semua
+            acceptAllDevices: true,
+            optionalServices: [
+                "0000ff00-0000-1000-8000-00805f9b34fb", // VSC / RPP02N
+                "0000ae30-0000-1000-8000-00805f9b34fb", // Alternatif VSC
+                "49535343-fe7d-4ae5-8fa9-9fafd205e455"  // Generic VSC
+            ]
+        });
+
+        const server = await device.gatt.connect();
+        
+        // Cari Service FF00 (Paling sering dipakai VSC)
+        let service;
+        try {
+            service = await server.getPrimaryService("0000ff00-0000-1000-8000-00805f9b34fb");
+        } catch (e) {
+            // Jika FF00 gagal, ambil service pertama yang tersedia
+            const services = await server.getPrimaryServices();
+            service = services[0];
+        }
+
+        const characteristics = await service.getCharacteristics();
+        // Cari characteristic yang mendukung WRITE
+        const writeChar = characteristics.find(c => 
+            c.properties.write || c.properties.writeWithoutResponse
+        );
+
+        if (writeChar) {
+            printerCharacteristic.value = writeChar;
+            isPrinterConnected.value = true;
+            alert("VSC Printer Terhubung!");
+        } else {
+            alert("Karakteristik printer tidak ditemukan.");
+        }
+    } catch (error) {
+        alert("Koneksi Gagal: " + error.message);
+    }
+};
+
+
+
+
         onMounted(() => {
             firebase.auth().onAuthStateChanged((user) => {
                 isAuthChecking.value = false;
@@ -84,6 +134,7 @@ const app = createApp({
                 }
             });
         });
+
 // start scanner v.1 //
 /*
         const startScanner = () => {
@@ -385,7 +436,8 @@ const app = createApp({
             memberSearchQuery, filteredMembers, globalSearchQuery, searchResults, 
             handleGlobalSearch, addBySearch, isConfirmModalOpen, isSuccessModalOpen, 
             eksekusiBayar, cetakStrukTerakhir, isScannerOpen, startScanner, stopScanner,
-            tambahJasa, listJasaDB, refreshData          
+            tambahJasa, listJasaDB, refreshData,
+            printerCharacteristic, isPrinterConnected, connectPrinter
         }
     }
 });
