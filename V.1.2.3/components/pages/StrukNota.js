@@ -24,73 +24,71 @@ const StrukNota = {
 
         // --- FUNGSI CETAK BLUETOOTH (ESC/POS) ---
         const printBluetooth = async (data) => {
-    if (!props.printerCharacteristic) return false;
+            if (!props.printerCharacteristic) return false;
 
-    try {
-        const encoder = new EscPosEncoder();
-        let result = encoder
-            .initialize()
-            .align('center')
-            .line(localSettings.value.storeName)
-            .line(localSettings.value.address)
-            .line('-'.repeat(32))
-            .align('left')
-            .line(`Nota: #${data.id.toString().slice(-5)}`)
-            .line(`Tgl : ${new Date(data.date).toLocaleDateString('id-ID')}`)
-            .line('-'.repeat(32));
+            try {
+                const encoder = new EscPosEncoder();
+                let result = encoder
+                    .initialize()
+                    .align('center')
+                    .line(localSettings.value.storeName)
+                    .line(localSettings.value.address)
+                    .line('-'.repeat(32))
+                    .align('left')
+                    .line(`Nota: #${data.id.toString().slice(-5)}`)
+                    .line(`Tgl : ${new Date(data.date).toLocaleDateString('id-ID')}`)
+                    .line('-'.repeat(32));
 
-        data.items.forEach(item => {
-            result.line(item.name.toUpperCase());
-            const detail = `${item.qty}x${getFinalPrice(item).toLocaleString()}`;
-            const subtotal = (item.qty * getFinalPrice(item)).toLocaleString();
-            result.line(detail.padEnd(20) + subtotal.padStart(12));
-        });
+                data.items.forEach(item => {
+                    result.line(item.name.toUpperCase());
+                    const detail = `${item.qty}x${getFinalPrice(item).toLocaleString()}`;
+                    const subtotal = (item.qty * getFinalPrice(item)).toLocaleString();
+                    result.line(detail.padEnd(20) + subtotal.padStart(12));
+                });
 
-        result.line('-'.repeat(32))
-            .align('right')
-            .line(`TOTAL: ${data.total.toLocaleString()}`)
-            .align('center')
-            .newline()
-            .line(localSettings.value.footerNote)
-            .newline()
-            .newline()
-            .cut()
-            .encode();
+                result.line('-'.repeat(32))
+                    .align('right')
+                    .line(`TOTAL:   ${data.total.toLocaleString().padStart(12)}`);
 
-                // --- LOGIKA PENGIRIMAN UNTUK VSC ---
-        const fullData = result.encode();
-        const chunkSize = 20; 
-        
-        for (let i = 0; i < fullData.length; i += chunkSize) {
-            const chunk = fullData.slice(i, i + chunkSize);
-            
-            // Coba gunakan Write Without Response agar lebih cepat & lancar
-            if (props.printerCharacteristic.properties.writeWithoutResponse) {
-                await props.printerCharacteristic.writeValueWithoutResponse(chunk);
-            } else {
-                await props.printerCharacteristic.writeValue(chunk);
+                // --- PENAMBAHAN BAGIAN BAYAR & KEMBALI ---
+                if (data.paymentMethod === 'cash') {
+                    result.line(`BAYAR:   ${(data.amountPaid || 0).toLocaleString().padStart(12)}`)
+                          .line(`KEMBALI: ${(data.change || 0).toLocaleString().padStart(12)}`);
+                } else {
+                    result.line(`METODE:  ${(data.paymentMethod || 'NON-TUNAI').toUpperCase().padStart(12)}`);
+                }
+
+                result.align('center')
+                    .newline()
+                    .line(localSettings.value.footerNote)
+                    .newline()
+                    .newline()
+                    .cut()
+                    .encode();
+
+                const fullData = result.encode();
+                const chunkSize = 20; 
+                
+                for (let i = 0; i < fullData.length; i += chunkSize) {
+                    const chunk = fullData.slice(i, i + chunkSize);
+                    if (props.printerCharacteristic.properties.writeWithoutResponse) {
+                        await props.printerCharacteristic.writeValueWithoutResponse(chunk);
+                    } else {
+                        await props.printerCharacteristic.writeValue(chunk);
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 30));
+                }
+
+                return true;
+            } catch (err) {
+                console.error("Gagal kirim data:", err);
+                return false;
             }
-            
-            // Jeda 30ms (VSC butuh waktu memproses buffer)
-            await new Promise(resolve => setTimeout(resolve, 30));
-        }
-
-
-        return true;
-    } catch (err) {
-        console.error("Gagal kirim data:", err);
-        return false;
-    }
-};
-
+        };
 
         const prepareAndPrint = async (data) => {
             reprintData.value = data;
-            
-            // 1. Coba cetak ke Bluetooth dulu
             const isBtSuccess = await printBluetooth(data);
-            
-            // 2. Jika bluetooth gagal/tidak ada, baru lari ke window.print (Struk layar)
             if (!isBtSuccess) {
                 await Vue.nextTick();
                 setTimeout(() => {
@@ -101,8 +99,6 @@ const StrukNota = {
                     }
                 }, 500);
             }
-
-            // Bersihkan data setelah selesai
             setTimeout(() => {
                 reprintData.value = null;
             }, 3000);
