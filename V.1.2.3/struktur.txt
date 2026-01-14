@@ -28,6 +28,7 @@ root/:
       -StrukNota.js
       -TambahProduk.js
       -TotalSaldo.js
+      -Transaksi.js
 - css/
    - style.css
 - js/
@@ -54,16 +55,3 @@ root/:
 - index.html
 - manifest.json
 - sw.js
-
-
-Ini kode terakhir dari project Kasir kita kemarin, 
-
-// Tambahkan ini di dalam setup() di Penjualan.js
-Vue.watch(() => props.cart.length, (newLen) => {
-    if (newLen === 0) {
-        emit('update:payMethod', null);
-        emit('update:cashAmount', 0);
-    }
-});
-
-tolong simpan di memori kamu karena kita mau lanjut optimasi bagian lainnya
