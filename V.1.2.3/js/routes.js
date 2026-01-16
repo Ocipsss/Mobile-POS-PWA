@@ -5,14 +5,14 @@ window.menuGroups = [
         items: [
             { name: 'Dashboard', icon: 'ri-dashboard-3-line' },
             { name: 'Penjualan', icon: 'ri-calculator-line' },
-            { name: 'Riwayat Transaksi', icon: 'ri-history-line' }
+            { name: 'Layanan Digital', icon: 'ri-smartphone-line' }
         ]
     },
     { 
         title: 'Operasional', 
         items: [
-            { name: 'Stock Monitor', icon: 'ri-radar-line' },
-            { name: 'Layanan Digital', icon: 'ri-smartphone-line' },
+            { name: 'Riwayat Transaksi', icon: 'ri-history-line' }, // TUKAR POSISI
+            { name: 'Stock Monitor', icon: 'ri-radar-line' },      // TUKAR POSISI
             { name: 'Piutang Penjualan', icon: 'ri-hand-coin-line' },
             { name: 'Pengeluaran', icon: 'ri-shopping-basket-line' } 
         ]
@@ -23,7 +23,7 @@ window.menuGroups = [
             { name: 'Daftar Produk', icon: 'ri-list-settings-line' },
             { name: 'Tambah Produk', icon: 'ri-add-box-line' },
             { name: 'Kategori Produk', icon: 'ri-price-tag-3-line' },
-            { name: 'Data Jasa', icon: 'ri-customer-service-2-line' }, // BARU: Untuk atur harga seduh/masak
+            { name: 'Data Jasa', icon: 'ri-customer-service-2-line' },
             { name: 'Data Member', icon: 'ri-user-heart-line' },
             { name: 'Data Kasir', icon: 'ri-user-star-line' }
         ]
