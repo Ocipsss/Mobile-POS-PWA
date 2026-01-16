@@ -1,5 +1,5 @@
 // components/pages/Penjualan.js
-// v2.7 - Optimized Layout & Precise Service Alignment
+// v2.8 - Sticky Header & Slim List Item (Aligned with Stock Monitor Style)
 
 const PagePenjualan = {
     props: ['cart', 'selectedMember', 'payMethod', 'cashAmount'],
@@ -69,80 +69,77 @@ const PagePenjualan = {
     },
     
     template: `
-    <div class="flex flex-col h-full relative overflow-hidden bg-white px-2">
+    <div class="flex flex-col h-full relative overflow-hidden bg-slate-50">
         
-        <div ref="scrollContainer" 
-             :class="payMethod && payMethod !== 'null' ? 'pb-[340px]' : 'pb-[150px]'"
-             class="flex-1 overflow-y-auto no-scrollbar transition-all duration-300 ease-in-out px-1">
-            
-            <div v-if="cart.length > 0 && $root.listJasaDB.length > 0" class="mt-4 mb-4 flex justify-center animate-slide-up">
-                <div class="w-full bg-blue-50 p-3 rounded-[1rem] border border-blue-100 shadow-sm flex items-center justify-center transition-all active:scale-95">
-                    <div class="flex items-center gap-2 pointer-events-none">
-                        <i class="ri-customer-service-2-line text-blue-600 text-sm"></i>
+        <div class="absolute top-2 right-4 z-[100] flex justify-end items-center pointer-events-none">
+    <div class="relative flex items-center bg-white border border-blue-200 rounded-full px-2.5 py-1.5 shadow-md active:scale-95 transition-all pointer-events-auto">
+        <i class="ri-customer-service-2-line text-blue-600 text-[10px]"></i>
+        <select 
+            @change="handleSelectJasa($event, $root.listJasaDB, $root.tambahJasa)"
+            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+            <option value="" disabled selected>Pilih Jasa</option>
+            <option v-for="j in $root.listJasaDB" :key="j.id" :value="j.id">
+                {{ j.name }} (+{{ formatRupiah(j.price).replace('Rp', '').trim() }})
+            </option>
+        </select>
+        <span class="text-[8px] font-black uppercase text-blue-700 ml-1 tracking-tighter">+ JASA</span>
+    </div>
+</div>
+
+       <div ref="scrollContainer" 
+     class="flex-1 flex flex-col min-h-0 bg-white mx-4 mt-2 rounded-t-2xl border-x border-t border-slate-100 shadow-sm relative overflow-hidden">
+
+    <div :class="cart.length > 0 ? 'overflow-y-auto' : 'overflow-hidden'" 
+         class="flex-1 no-scrollbar px-4 pt-2 pb-6">
+        
+        <div v-if="cart.length === 0" class="h-full flex flex-col items-center justify-center text-slate-300">
+            <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3 border border-slate-100">
+                <i class="ri-shopping-basket-line text-2xl opacity-20"></i>
+            </div>
+            <p class="text-[8px] font-black uppercase tracking-[0.3em] opacity-40">Keranjang Kosong</p>
+        </div>
+
+        <div v-else class="flex flex-col gap-2">
+            <div v-for="item in cart" :key="item.id" 
+                class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex flex-col gap-2 animate-slide-up">
+                
+                <div class="flex items-center justify-between">
+                    <div class="min-w-0 flex-1">
+                        <div class="text-[11px] font-black text-slate-700 uppercase leading-tight truncate">{{ item.name }}</div>
+                        <div class="text-[9px] font-bold text-slate-400 mt-0.5">
+                            {{ formatRupiah(item.price_sell) }} <span class="mx-1 opacity-30">×</span> {{ item.qty }}
+                        </div>
                     </div>
-                    <select 
-                        @change="handleSelectJasa($event, $root.listJasaDB, $root.tambahJasa)"
-                        class="bg-transparent border-none text-[11px] font-black uppercase text-blue-700 outline-none appearance-none cursor-pointer px-1 m-0 leading-none">
-                        <option value="" disabled selected>+ TAMBAH JASA / LAYANAN</option>
-                        <option v-for="j in $root.listJasaDB" :key="j.id" :value="j.id" class="text-gray-800 font-bold uppercase">
-                            {{ j.name }} (+{{ formatRupiah(j.price).replace('Rp', '').trim() }})
-                        </option>
-                    </select>
-                </div>
-            </div>
-
-            <div v-if="cart.length === 0" class="h-64 flex flex-col items-center justify-center text-gray-300">
-                <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-                    <i class="ri-shopping-basket-line text-3xl opacity-20"></i>
-                </div>
-                <p class="text-[9px] font-black uppercase tracking-[0.3em] opacity-40">Keranjang Kosong</p>
-            </div>
-
-            <div v-else class="flex flex-col gap-3">
-                <div v-for="item in cart" :key="item.id" 
-                    class="bg-white p-4 rounded-[1rem] flex flex-col gap-4 animate-slide-up border border-gray-100 shadow-sm">
                     
-                    <div class="flex justify-between items-center">
-                        <div class="min-w-0 flex-1">
-                            <div class="text-[13px] font-black text-gray-800 uppercase leading-none mb-1 truncate">{{ item.name }}</div>
-                            <div class="text-[10px] font-bold text-gray-400">
-                                {{ formatRupiah(item.price_sell) }} <span class="mx-1 opacity-30">×</span> {{ item.qty }}
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2 bg-gray-50 p-1 rounded-xl border border-gray-100 shadow-inner">
-                            <button @click="updateQty(item.id, -1)" 
-                                class="w-8 h-8 flex items-center justify-center rounded-lg text-red-600 font-black border-none bg-white shadow-sm active:scale-90 transition-all">-</button>
-                            <span class="text-[12px] font-black text-gray-700 min-w-[24px] text-center">{{ item.qty }}</span>
-                            <button @click="updateQty(item.id, 1)" 
-                                class="w-8 h-8 flex items-center justify-center rounded-lg text-blue-600 font-black border-none bg-white shadow-sm active:scale-90 transition-all">+</button>
+                    <div class="flex items-center gap-1.5 bg-white p-1 rounded-lg border border-slate-200">
+                        <button @click="updateQty(item.id, -1)" class="w-7 h-7 flex items-center justify-center rounded-md text-red-500 font-black active:scale-75 transition-all">-</button>
+                        <span class="text-[11px] font-black text-slate-700 min-w-[20px] text-center">{{ item.qty }}</span>
+                        <button @click="updateQty(item.id, 1)" class="w-7 h-7 flex items-center justify-center rounded-md text-blue-600 font-black active:scale-75 transition-all">+</button>
+                    </div>
+                </div>
+
+                <div v-if="item.extraCharge > 0" 
+                    class="flex justify-between items-center bg-blue-100/30 p-2 rounded-lg border border-blue-100">
+                    <div class="flex items-center gap-2">
+                        <i class="ri-fire-fill text-blue-500 text-xs"></i>
+                        <div class="flex flex-col">
+                            <span class="text-[8px] font-black text-blue-800 uppercase tracking-tighter">{{ item.extraChargeName || 'JASA' }}</span>
+                            <span class="text-[8px] font-bold text-blue-400 uppercase tracking-tighter">{{ formatRupiah(item.extraCharge) }} × {{ item.extraChargeQty }}</span>
                         </div>
                     </div>
-
-                    <div v-if="item.extraCharge > 0" 
-                        class="flex justify-between items-center bg-blue-50/50 p-3 rounded-[1rem] border border-blue-100/50 animate-slide-up">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center shadow-md shadow-blue-100">
-                                <i class="ri-fire-fill text-sm"></i>
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="text-[9px] font-black text-blue-800 uppercase leading-none mb-0.5">{{ item.extraChargeName || 'JASA' }}</span>
-                                <span class="text-[9px] font-bold text-blue-400 uppercase tracking-tighter">{{ formatRupiah(item.extraCharge) }} × {{ item.extraChargeQty }}</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2 bg-white rounded-xl p-1 border border-blue-100 shadow-sm">
-                            <button @click="updateJasaQty(item, -1)" 
-                                class="w-7 h-7 flex items-center justify-center text-orange-500 font-black border-none bg-transparent active:scale-75">-</button>
-                            <span class="text-[11px] font-black text-gray-700 min-w-[18px] text-center">{{ item.extraChargeQty }}</span>
-                            <button @click="updateJasaQty(item, 1)" 
-                                class="w-7 h-7 flex items-center justify-center text-blue-600 font-black border-none bg-transparent active:scale-75">+</button>
-                        </div>
+                    <div class="flex items-center gap-1.5">
+                        <button @click="updateJasaQty(item, -1)" class="w-6 h-6 flex items-center justify-center text-orange-500 font-black bg-white border border-blue-100 rounded-md">-</button>
+                        <span class="text-[10px] font-black text-slate-700 min-w-[15px] text-center">{{ item.extraChargeQty }}</span>
+                        <button @click="updateJasaQty(item, 1)" class="w-6 h-6 flex items-center justify-center text-blue-600 font-black bg-white border border-blue-100 rounded-md">+</button>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
 
         <div class="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-lg border-t border-gray-100 z-50 shadow-[0_-15px_30px_rgba(0,0,0,0.08)]">
-            
             <div v-if="payMethod === 'cash'" class="mb-4 animate-slide-up">
                 <div class="bg-gray-900 p-5 rounded-[1rem] shadow-2xl">
                     <div class="flex items-center gap-4 mb-4">
