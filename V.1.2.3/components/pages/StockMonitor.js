@@ -55,62 +55,63 @@ window.PageStockMonitor = {
         return { filteredProducts, filterStatus, getStockTheme, getStatusLabel, loadStock, isLoading };
     },
     template: `
-    <div class="p-6 space-y-6 pb-24 bg-white min-h-full">
-        <div v-if="isLoading" class="text-center py-2">
-            <span class="text-[8px] font-black text-blue-500 uppercase animate-pulse">Sinkronisasi Stok...</span>
-        </div>
+<div class="fixed top-[64px] left-0 w-full h-[calc(100vh-64px)] bg-slate-50 flex flex-col overflow-hidden">
+    
+   <div class="w-full bg-slate-50 pt-3 pb-3 px-6 z-50 shrink-0 shadow-sm">
+    <div class="flex gap-2 p-1.5 bg-white rounded-xl border border-slate-200">
+        <button @click="filterStatus = 'all'"
+            :class="filterStatus === 'all' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 bg-slate-50'"
+            class="flex-1 py-2.5 rounded-lg border-none text-[10px] font-black uppercase tracking-wider transition-all active:scale-95">
+            All
+        </button>
+        <button @click="filterStatus = 'kritis'"
+            :class="filterStatus === 'kritis' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 bg-slate-50'"
+            class="flex-1 py-2.5 rounded-lg border-none text-[10px] font-black uppercase tracking-wider transition-all active:scale-95">
+            Kritis
+        </button>
+        <button @click="filterStatus = 'menipis'"
+            :class="filterStatus === 'menipis' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 bg-slate-50'"
+            class="flex-1 py-2.5 rounded-lg border-none text-[10px] font-black uppercase tracking-wider transition-all active:scale-95">
+            Menipis
+        </button>
+    </div>
+</div>
 
-        <div class="flex p-1 bg-slate-50 rounded-2xl border border-slate-100">
-            <button @click="filterStatus = 'all'"
-                :class="filterStatus === 'all' ? 'bg-blue-500 text-white shadow-md' : 'text-slate-400 bg-transparent'"
-                class="flex-1 py-2 rounded-xl border-none text-[10px] font-black uppercase tracking-widest transition-all">
-                All
-            </button>
-            <button @click="filterStatus = 'kritis'"
-                :class="filterStatus === 'kritis' ? 'text-blue-500 font-black' : 'text-slate-400 bg-transparent'"
-                class="flex-1 py-2 rounded-xl border-none text-[10px] uppercase tracking-widest transition-all">
-                Kritis
-            </button>
-            <button @click="filterStatus = 'menipis'"
-                :class="filterStatus === 'menipis' ? 'text-blue-500 font-black' : 'text-slate-400 bg-transparent'"
-                class="flex-1 py-2 rounded-xl border-none text-[10px] uppercase tracking-widest transition-all">
-                Menipis
-            </button>
-        </div>
 
-        <div class="flex flex-col gap-4">
-            <div v-for="p in filteredProducts" :key="p.id" 
-                class="bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between">
+    <div class="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-2 pb-40">
+    <div class="flex flex-col gap-2">
+        <div v-for="p in filteredProducts" :key="p.id" 
+            class="bg-white p-2.5 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+            
+            <div class="flex items-center gap-3 min-w-0">
+                <div :class="getStockTheme(p.qty)" 
+                     class="w-11 h-11 rounded-lg flex flex-col items-center justify-center border shrink-0">
+                    <span class="text-sm font-black leading-none">{{ p.qty }}</span>
+                    <span class="text-[6px] font-bold uppercase opacity-60">{{ p.unit || 'pcs' }}</span>
+                </div>
                 
-                <div class="flex items-center gap-4">
-                    <div :class="getStockTheme(p.qty)" 
-                         class="w-14 h-14 rounded-[1.5rem] flex flex-col items-center justify-center border transition-all">
-                        <span class="text-lg font-black leading-none">{{ p.qty }}</span>
-                        <span class="text-[7px] font-bold uppercase opacity-60">{{ p.unit || 'pcs' }}</span>
+                <div class="min-w-0">
+                    <div class="text-[11px] font-black text-slate-700 uppercase leading-tight truncate">
+                        {{ p.name }}
                     </div>
-                    
-                    <div>
-                        <div class="text-[13px] font-black text-slate-700 uppercase leading-tight tracking-tight">{{ p.name }}</div>
-                        <div class="flex items-center gap-2 mt-1.5">
-                            <span class="text-[8px] text-slate-400 font-black uppercase tracking-widest">{{ p.category }}</span>
-                            <span class="w-1 h-1 rounded-full bg-slate-200"></span>
-                            <span :class="getStockTheme(p.qty).split(' ')[1]" class="text-[8px] font-black uppercase tracking-widest">
-                                {{ getStatusLabel(p.qty) }}
-                            </span>
-                        </div>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <span class="text-[7px] text-slate-400 font-black uppercase">{{ p.category }}</span>
+                        <span class="w-1 h-1 rounded-full bg-slate-200"></span>
+                        <span :class="getStockTheme(p.qty).split(' ')[1]" class="text-[7px] font-black uppercase">
+                            {{ getStatusLabel(p.qty) }}
+                        </span>
                     </div>
                 </div>
-
-                <button @click="loadStock" class="w-9 h-9 bg-slate-50 text-slate-300 rounded-full border-none flex items-center justify-center active:scale-95">
-                    <i class="ri-refresh-line text-lg"></i>
-                </button>
             </div>
 
-            <div v-if="filteredProducts.length === 0" class="py-20 text-center opacity-30">
-                <i class="ri-check-double-line text-4xl"></i>
-                <p class="text-[10px] font-black uppercase mt-2 tracking-widest">Stok Aman</p>
-            </div>
+            <button @click="loadStock" class="w-7 h-7 bg-slate-50 text-slate-300 rounded-full border-none flex items-center justify-center shrink-0 ml-2">
+                <i class="ri-refresh-line text-sm"></i>
+            </button>
         </div>
     </div>
+</div>
+
+</div>
+
     `
 };
