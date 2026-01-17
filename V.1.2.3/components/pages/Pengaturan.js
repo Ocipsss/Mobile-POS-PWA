@@ -119,6 +119,7 @@ const PagePengaturan = {
         return { stats, storeSettings, saveSettings, handleExport, handleImport, handleResetData };
     },
     template: `
+    
    <div class="w-full flex flex-col gap-4 py-2 animate-zoom-in no-scrollbar px-1 pb-24">
         
         <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-[1rem] text-white shadow-xl">
@@ -215,5 +216,10 @@ const PagePengaturan = {
         </div>
 
     </div>
+    <button onclick="Dexie.delete('SinarPagiDB').then(() => location.reload())" 
+        style="background:red; color:white; padding: 20px; width:100%; font-weight:bold; position:fixed; top:0; z-index:9999;">
+    HAPUS DATABASE LOKAL & RELOAD
+</button>
+
     `
 };
