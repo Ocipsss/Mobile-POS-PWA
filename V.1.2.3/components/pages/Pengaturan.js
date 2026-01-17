@@ -216,10 +216,5 @@ const PagePengaturan = {
         </div>
 
     </div>
-    <button onclick="Dexie.delete('SinarPagiDB').then(() => location.reload())" 
-        style="background:red; color:white; padding: 20px; width:100%; font-weight:bold; position:fixed; top:0; z-index:9999;">
-    HAPUS DATABASE LOKAL & RELOAD
-</button>
-
     `
 };
