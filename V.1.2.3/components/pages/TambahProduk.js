@@ -4,6 +4,7 @@ const PageTambahProduk = {
     emits: ['open-scanner'],
     setup(props, { emit }) {
         const product = Vue.ref({
+            id: '', // Tambahkan field id
             image: null, name: '', code: '', category: 'Umum', unit: 'pcs', price_modal: 0, price_sell: 0, qty: 0,
             pack_price: 0, pack_size: 1
         });
@@ -13,15 +14,12 @@ const PageTambahProduk = {
         const displayPack = Vue.ref("");
         const listCategories = Vue.ref([]);
 
-        // --- FITUR BARU: VALIDASI REAL-TIME ---
-        // Memantau perubahan pada kode produk
+        // Validasi real-time kode produk (tetap dipertahankan)
         Vue.watch(() => product.value.code, async (newCode) => {
             if (newCode && newCode.trim() !== "") {
                 const exist = await db.products.where('code').equals(newCode).first();
                 if (exist) {
-                    alert(`⚠️ PERINGATAN: Kode "${newCode}" sudah digunakan oleh produk "${exist.name}". Gunakan kode lain atau edit produk yang sudah ada.`);
-                    // Opsional: Kosongkan kode jika ingin memaksa user menggunakan kode unik
-                    // product.value.code = "";
+                    alert(`⚠️ PERINGATAN: Kode "${newCode}" sudah digunakan oleh produk "${exist.name}".`);
                 }
             }
         });
@@ -55,9 +53,7 @@ const PageTambahProduk = {
         };
 
         const clearInitialSize = () => {
-            if (product.value.pack_size === 1) {
-                product.value.pack_size = null;
-            }
+            if (product.value.pack_size === 1) product.value.pack_size = null;
         };
 
         const updatePackSize = () => {
@@ -99,42 +95,40 @@ const PageTambahProduk = {
         };
 
         const saveProduct = async () => {
-            // 1. Validasi Input Dasar
             if(!product.value.name || !product.value.price_sell) {
                 alert("Nama dan Harga Jual wajib diisi!");
                 return;
             }
 
             try {
-                // 2. PROTEKSI GANDA: CEK DUPLIKASI SEBELUM SIMPAN
+                // 1. CEK DUPLIKASI KODE
                 if (product.value.code) {
-                    const existingProduct = await db.products
-                        .where('code')
-                        .equals(product.value.code)
-                        .first();
-
+                    const existingProduct = await db.products.where('code').equals(product.value.code).first();
                     if (existingProduct) {
-                        alert(`Gagal Simpan! Produk "${existingProduct.name}" sudah menggunakan kode ini.`);
-                        return; // Berhenti
+                        alert(`Gagal! Kode ini sudah milik "${existingProduct.name}".`);
+                        return;
                     }
                 }
 
-                // 3. Simpan data
-                const productData = JSON.parse(JSON.stringify(product.value));
-                const localId = await db.products.add(productData);
+                // 2. GENERATE UID (PENTING!)
+                // Kita buat ID unik di sini sebelum masuk ke database
+                const finalId = window.generateUID();
 
-                if (typeof fdb !== 'undefined') {
-                    await fdb.ref('products/' + localId).set({
-                        ...productData,
-                        id: localId,
-                        updatedAt: new Date().toISOString()
-                    });
-                }
+                // 3. SIAPKAN DATA
+                const productData = {
+                    ...JSON.parse(JSON.stringify(product.value)),
+                    id: finalId,
+                    updatedAt: new Date().toISOString()
+                };
+
+                // 4. SIMPAN KE DEXIE 
+                // Hooks di database.js akan otomatis kirim ke Firebase secara background
+                await db.products.add(productData);
 
                 alert("Produk Berhasil Disimpan!");
                 
                 // Reset Form
-                product.value = { image: null, name: '', code: '', category: 'Umum', unit: 'pcs', price_modal: 0, price_sell: 0, qty: 0, pack_price: 0, pack_size: 1 };
+                product.value = { id: '', image: null, name: '', code: '', category: 'Umum', unit: 'pcs', price_modal: 0, price_sell: 0, qty: 0, pack_price: 0, pack_size: 1 };
                 displayModal.value = ""; displaySell.value = ""; displayPack.value = "";
             } catch (err) { 
                 alert("Gagal menyimpan: " + err.message); 
