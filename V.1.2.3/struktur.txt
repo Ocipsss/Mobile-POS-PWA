@@ -1,57 +1,65 @@
-root/:
-- components/
-   - GlobalSearch.js
-   - Layout.js
-   - Placeholder.js
-   - pages/
-      -ArusUang.js
-      -DaftarProduk.js
-      -Dashboard.js
-      -DataJasa.js
-      -DataKasir.js
-      -DataMember.js
-      -DataSuplier.js
-      -HargaGrosir.js
-      -HargaPaket.js
-      -KategoriProduk.js
-      -LaporanBulanan.js
-      -LaporanHarian.js
-      -LaporanLabaRugi.js
-      -LaporanMingguan.js
-      -PaketProduk.js
-      -Pemasukan.js
-      -Pengaturan.js
-      -Pengeluaran.js
-      -Penjualan.js
-      -PiutangPenjualan.js
-      -StockMonitor.js
-      -StrukNota.js
-      -TambahProduk.js
-      -TotalSaldo.js
-      -Transaksi.js
-- css/
-   - style.css
-- js/
-   - app.js
-   - backup.js
-   - database.js
-   - routes.js
-- lib/
-   -dayjs.min.js v1.11.10
-   -dexie.min.js 
-   -font-awesome.min.css
-   -pico.min.css
-   -react-dom.js
-   -react.js
-   -remixicon.css
-   -remixicon.svg
-   -remixicon.ttf
-   -remixicon.woff
-   -remixicon.woff2
-   -tailwind.css
-   -unocss.js
-   -vue.js v3.5.26
-   -workbox-sw.js
-- index.html
-- manifest.json
-- sw.js
+.
+├── components
+│   ├── GlobalSearch.js
+│   ├── Layout.js
+│   ├── Placeholder.js
+│   └── pages
+│       ├── ArusUang.js
+│       ├── DaftarProduk.js
+│       ├── Dashboard.js
+│       ├── DataJasa.js
+│       ├── DataKasir.js
+│       ├── DataMember.js
+│       ├── DataSuplier.js
+│       ├── DigitalSvc.js
+│       ├── HargaGrosir.js
+│       ├── HargaPaket.js
+│       ├── KategoriProduk.js
+│       ├── LaporanBulanan.js
+│       ├── LaporanHarian.js
+│       ├── LaporanLabaRugi.js
+│       ├── LaporanMingguan.js
+│       ├── PaketProduk.js
+│       ├── Pemasukan.js
+│       ├── Pengaturan.js
+│       ├── Pengeluaran.js
+│       ├── Penjualan.js
+│       ├── PiutangPenjualan.js
+│       ├── StockMonitor.js
+│       ├── StrukNota.js
+│       ├── TambahProduk.js
+│       ├── TotalSaldo.js
+│       └── Transaksi.js
+├── css
+│   └── style.css
+├── icon-192.png
+├── icon-512.png
+├── index.html
+├── js
+│   ├── app.js
+│   ├── backup.js
+│   ├── database.js
+│   └── routes.js
+├── lib
+│   ├── dayjs.min.js
+│   ├── dexie.min.js
+│   ├── esc-pos-encoder.js
+│   ├── font-awesome.min.css
+│   ├── html5-qrcode.min.js
+│   ├── pico.min.css
+│   ├── quagga.min.js
+│   ├── react-dom.js
+│   ├── react.js
+│   ├── remixicon.css
+│   ├── remixicon.svg
+│   ├── remixicon.ttf
+│   ├── remixicon.woff
+│   ├── remixicon.woff2
+│   ├── tailwind.css
+│   ├── unocss.js
+│   ├── vue.js
+│   ├── workbox-sw.js
+│   └── zxing.min.js
+├── manifest.json
+├── struktur.txt
+└── sw.js

@@ -7,7 +7,6 @@ const PagePengaturan = {
             members: 0
         });
 
-        // State untuk Pengaturan Toko & Printer
         const storeSettings = Vue.ref({
             storeName: 'SINAR PAGI',
             address: 'Jl. Raya Utama No. 01',
@@ -15,56 +14,54 @@ const PagePengaturan = {
             footerNote: 'Terima Kasih Atas Kunjungan Anda'
         });
 
-        // Load data awal
+        // Objek untuk menyimpan referensi listener agar bisa dimatikan (unmount)
+        const firebaseListeners = {};
+
         const loadAllData = async () => {
-            // Load Statistik
+            // 1. LOAD CEPAT DARI LOKAL (IndexedDB)
+            // Ini agar user tidak melihat angka 0 saat aplikasi baru dibuka
             stats.value.products = await db.products.count();
             stats.value.transactions = await db.transactions.count();
             stats.value.members = await db.members.count();
 
-            // 1. Load dari Cloud (Firebase) jika ada
+            // 2. LOAD & LISTEN DARI CLOUD (Firebase)
             if (typeof fdb !== 'undefined') {
                 try {
+                    // Load Pengaturan Toko
                     const snapshot = await fdb.ref('settings/store').once('value');
                     const cloudData = snapshot.val();
                     if (cloudData) {
                         storeSettings.value = cloudData;
-                        // Update localstorage agar tetap sinkron
                         localStorage.setItem('sinar_pagi_settings', JSON.stringify(cloudData));
-                    } else {
-                        // 2. Jika cloud kosong, baru ambil dari LocalStorage
-                        const savedSettings = localStorage.getItem('sinar_pagi_settings');
-                        if (savedSettings) {
-                            storeSettings.value = JSON.parse(savedSettings);
-                        }
                     }
+
+                    // --- REAL-TIME STATS (Saran: Reaktif & Beban Rendah) ---
+                    // Menggunakan on('value') hanya menarik metadata jumlah, bukan isi data
+                    const tables = ['products', 'transactions', 'members'];
+                    tables.forEach(table => {
+                        firebaseListeners[table] = fdb.ref(table).on('value', (snap) => {
+                            stats.value[table] = snap.numChildren();
+                        });
+                    });
+
                 } catch (err) {
-                    console.error("Gagal memuat pengaturan cloud:", err);
+                    console.error("Gagal sinkronisasi cloud:", err);
                 }
             }
         };
 
-        // Simpan Pengaturan ke Lokal & Cloud
         const saveSettings = async () => {
             try {
-                // Simpan ke LocalStorage
                 localStorage.setItem('sinar_pagi_settings', JSON.stringify(storeSettings.value));
-
-                // Simpan ke Firebase (Cloud Sync)
                 if (typeof fdb !== 'undefined') {
                     await fdb.ref('settings/store').set({
                         ...storeSettings.value,
                         updatedAt: new Date().toISOString()
                     });
                 }
-
-                alert("✅ Pengaturan Toko Berhasil Disimpan ke Cloud!");
-                // Memicu event agar komponen lain (seperti Struk) terupdate
-                setTimeout(() => {
-                    window.location.reload();
-                }, 500);
+                alert("✅ Pengaturan Berhasil Disimpan!");
             } catch (err) {
-                alert("❌ Gagal menyimpan ke cloud: " + err.message);
+                alert("❌ Gagal: " + err.message);
             }
         };
 
@@ -76,39 +73,27 @@ const PagePengaturan = {
         const handleImport = async (event) => {
             const file = event.target.files[0];
             if (!file) return;
-
             const res = await BackupService.importData(file);
             if (res.success) {
                 alert(res.message);
                 window.location.reload(); 
-            } else {
-                alert("Gagal: " + res.message);
             }
             event.target.value = '';
         };
 
         const handleResetData = async () => {
-            const murni = confirm("PERINGATAN KERAS!\n\nSemua data (Produk, Transaksi, Member, Kategori) akan DIHAPUS PERMANEN dari perangkat ini dan juga dari CLOUD (Firebase).\n\nApakah Anda benar-benar yakin?");
-            
-            if (murni) {
-                const doubleCheck = confirm("Tindakan ini tidak bisa dibatalkan. Klik OK untuk menghapus semuanya.");
-                if (doubleCheck) {
+            if (confirm("Hapus semua data PERMANEN dari LOKAL dan CLOUD?")) {
+                if (confirm("Yakin? Tindakan ini tidak bisa dibatalkan.")) {
                     try {
                         if (typeof fdb !== 'undefined') {
-                            const tables = ['products', 'categories', 'transactions', 'members', 'settings'];
-                            for (const t of tables) {
-                                await fdb.ref(t).remove();
-                            }
+                            const tables = ['products', 'categories', 'transactions', 'members', 'expenses', 'digital_transactions'];
+                            for (const t of tables) await fdb.ref(t).remove();
                         }
-                        await db.products.clear();
-                        await db.categories.clear();
-                        await db.transactions.clear();
-                        await db.members.clear();
-
-                        alert("Database telah dikosongkan.");
+                        await db.delete(); // Menghapus seluruh database Dexie
+                        alert("Database dibersihkan. Aplikasi akan dimuat ulang.");
                         window.location.reload();
                     } catch (err) {
-                        alert("Gagal mereset: " + err.message);
+                        alert("Gagal reset: " + err.message);
                     }
                 }
             }
@@ -116,105 +101,91 @@ const PagePengaturan = {
 
         Vue.onMounted(loadAllData);
 
+        // Membersihkan listener agar tidak memory leak saat pindah halaman
+        Vue.onUnmounted(() => {
+            if (typeof fdb !== 'undefined') {
+                ['products', 'transactions', 'members'].forEach(table => {
+                    fdb.ref(table).off('value', firebaseListeners[table]);
+                });
+            }
+        });
+
         return { stats, storeSettings, saveSettings, handleExport, handleImport, handleResetData };
     },
     template: `
-    
-   <div class="w-full flex flex-col gap-4 py-2 animate-zoom-in no-scrollbar px-1 pb-24">
-        
-        <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-[1rem] text-white shadow-xl">
-            <h3 class="text-sm font-black uppercase tracking-widest opacity-80 m-0">Status Data</h3>
-            <div class="grid grid-cols-3 gap-4 mt-4 text-center">
-                <div>
-                    <div class="text-xl font-black">{{ stats.products }}</div>
-                    <div class="text-[8px] font-bold uppercase opacity-60">Produk</div>
+    <div class="w-full flex flex-col gap-4 py-2 animate-zoom-in no-scrollbar px-1 pb-24">
+        <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-[1.5rem] text-white shadow-xl">
+            <h3 class="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 m-0 text-center">Ringkasan Data (Real-time)</h3>
+            <div class="grid grid-cols-3 gap-4 mt-6 text-center">
+                <div class="flex flex-col gap-1">
+                    <div class="text-2xl font-black leading-none">{{ stats.products }}</div>
+                    <div class="text-[8px] font-bold uppercase opacity-60 tracking-wider">Produk</div>
                 </div>
-                <div class="border-l border-white/20">
-                    <div class="text-xl font-black">{{ stats.transactions }}</div>
-                    <div class="text-[8px] font-bold uppercase opacity-60">Transaksi</div>
+                <div class="flex flex-col gap-1 border-x border-white/20">
+                    <div class="text-2xl font-black leading-none">{{ stats.transactions }}</div>
+                    <div class="text-[8px] font-bold uppercase opacity-60 tracking-wider">Transaksi</div>
                 </div>
-                <div class="border-l border-white/20">
-                    <div class="text-xl font-black">{{ stats.members }}</div>
-                    <div class="text-[8px] font-bold uppercase opacity-60">Member</div>
+                <div class="flex flex-col gap-1">
+                    <div class="text-2xl font-black leading-none">{{ stats.members }}</div>
+                    <div class="text-[8px] font-bold uppercase opacity-60 tracking-wider">Member</div>
                 </div>
             </div>
         </div>
 
-        <div class="flex flex-col gap-4">
-            <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2">Identitas Toko & Struk</h4>
-            <div class="bg-white p-6 rounded-[1rem] border border-gray-100 shadow-sm flex flex-col gap-4">
-                <div>
-                    <label class="text-[9px] font-black text-gray-400 uppercase ml-2 mb-1 block">Nama Toko (Header)</label>
-                    <input v-model="storeSettings.storeName" type="text" class="form-control font-bold" placeholder="Contoh: Sinar Pagi POS">
-                </div>
-                <div>
-                    <label class="text-[9px] font-black text-gray-400 uppercase ml-2 mb-1 block">Alamat</label>
-                    <input v-model="storeSettings.address" type="text" class="form-control" placeholder="Alamat lengkap...">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-[9px] font-black text-gray-400 uppercase ml-2 mb-1 block">No. Telepon</label>
-                        <input v-model="storeSettings.phone" type="text" class="form-control" placeholder="0812...">
+        <div class="flex flex-col gap-3">
+            <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2">Profil Toko</h4>
+            <div class="bg-white p-6 rounded-[1.5rem] border border-gray-100 shadow-sm flex flex-col gap-4">
+                <div class="grid gap-4">
+                    <div class="group">
+                        <label class="text-[9px] font-black text-gray-400 uppercase ml-2 mb-1 block">Nama Toko</label>
+                        <input v-model="storeSettings.storeName" type="text" class="w-full p-3 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-all outline-none">
                     </div>
                     <div>
-                        <label class="text-[9px] font-black text-gray-400 uppercase ml-2 mb-1 block">Pesan Bawah Struk</label>
-                        <input v-model="storeSettings.footerNote" type="text" class="form-control" placeholder="Terima kasih...">
+                        <label class="text-[9px] font-black text-gray-400 uppercase ml-2 mb-1 block">Alamat</label>
+                        <input v-model="storeSettings.address" type="text" class="w-full p-3 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-all outline-none">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[9px] font-black text-gray-400 uppercase ml-2 mb-1 block">WhatsApp</label>
+                            <input v-model="storeSettings.phone" type="text" class="w-full p-3 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-all outline-none">
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-black text-gray-400 uppercase ml-2 mb-1 block">Catatan Struk</label>
+                            <input v-model="storeSettings.footerNote" type="text" class="w-full p-3 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-all outline-none">
+                        </div>
                     </div>
                 </div>
-                <button @click="saveSettings" 
-                        class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-blue-100 active:scale-95 transition-all tracking-widest mt-2 flex items-center justify-center gap-2">
-                    <i class="ri-cloud-line text-lg"></i>
-                    Simpan Ke Cloud
+                <button @click="saveSettings" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i class="ri-save-3-line text-lg"></i> Simpan Pengaturan
                 </button>
             </div>
         </div>
 
-        <div class="flex flex-col gap-4">
-            <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2">Keamanan & Cadangan</h4>
-            
-            <div @click="handleExport" class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 active:scale-95 transition-all cursor-pointer">
-                <div class="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center text-2xl">
-                    <i class="ri-cloud-download-line"></i>
+        <div class="flex flex-col gap-3">
+            <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2">Sistem & Backup</h4>
+            <div class="grid grid-cols-1 gap-3">
+                <div @click="handleExport" class="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 active:bg-gray-50 transition-all">
+                    <div class="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center text-xl"><i class="ri-download-cloud-line"></i></div>
+                    <div class="flex-1"><div class="text-[11px] font-black text-gray-800 uppercase">Ekspor Data (.json)</div></div>
                 </div>
-                <div class="flex-1">
-                    <div class="text-sm font-black text-gray-800 uppercase">Download Backup</div>
-                    <div class="text-[10px] text-gray-500 font-medium">Simpan data ke file .json</div>
-                </div>
-                <i class="ri-arrow-right-s-line text-gray-300 text-xl"></i>
-            </div>
-
-            <label class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 active:scale-95 transition-all cursor-pointer">
-                <div class="w-12 h-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center text-2xl">
-                    <i class="ri-upload-cloud-2-line"></i>
-                </div>
-                <div class="flex-1">
-                    <div class="text-sm font-black text-gray-800 uppercase">Restore Data</div>
-                    <div class="text-[10px] text-gray-500 font-medium">Pulihkan data dari file backup</div>
+                <label class="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 active:bg-gray-50 transition-all cursor-pointer">
+                    <div class="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center text-xl"><i class="ri-upload-cloud-line"></i></div>
+                    <div class="flex-1"><div class="text-[11px] font-black text-gray-800 uppercase">Impor Data</div></div>
                     <input type="file" accept=".json" @change="handleImport" class="hidden">
-                </div>
-                <i class="ri-arrow-right-s-line text-gray-300 text-xl"></i>
-            </label>
-        </div>
-
-        <div class="flex flex-col gap-4">
-            <h4 class="text-[10px] font-black text-red-400 uppercase tracking-[0.2em] ml-2">Zona Bahaya</h4>
-            <div class="bg-red-50 p-6 rounded-[2rem] border-2 border-dashed border-red-100">
-                <p class="text-[10px] text-red-500 font-bold mb-4 leading-relaxed uppercase tracking-tighter text-center">
-                    Menghapus data akan membersihkan seluruh database secara permanen.
-                </p>
-                <button @click="handleResetData" 
-                        class="w-full py-4 bg-red-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg shadow-red-100 active:scale-95 transition-all tracking-widest">
-                    Kosongkan Database
-                </button>
+                </label>
             </div>
         </div>
 
-        <div class="mt-4 p-6 text-center">
-            <i class="ri-smartphone-line text-2xl text-gray-300"></i>
-            <div class="text-[9px] font-black text-gray-400 uppercase mt-2 tracking-widest">Sinar Pagi POS v1.3.1</div>
-            <div class="text-[8px] text-gray-300 font-bold uppercase">Database: IndexedDB + Firebase Cloud</div>
+        <div class="mt-4 p-4 bg-red-50 rounded-[1.5rem] border border-red-100">
+            <h4 class="text-[9px] font-black text-red-500 uppercase tracking-[0.2em] mb-3 text-center">Zona Berbahaya</h4>
+            <button @click="handleResetData" class="w-full py-3 bg-white text-red-500 border border-red-200 rounded-xl font-black text-[10px] uppercase active:bg-red-50 transition-all">
+                Kosongkan Database
+            </button>
         </div>
 
+        <div class="py-8 text-center">
+            <div class="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em]">Sinar Pagi POS v1.3.1</div>
+        </div>
     </div>
     `
 };
