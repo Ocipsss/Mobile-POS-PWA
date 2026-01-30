@@ -387,18 +387,43 @@ const app = createApp({
             searchResults.value = all.filter(p => (p.name?.toLowerCase().includes(query)) || (p.code?.includes(query))).slice(0, 5); 
         };
 
-        const addBySearch = (product) => {
-            if (activePage.value === 'Daftar Produk') {
-                window.dispatchEvent(new CustomEvent('open-product-detail', { detail: product }));
-                globalSearchQuery.value = ""; searchResults.value = [];
-                return;
-            }
-            
-            const inCart = cart.value.find(item => item.id === product.id);
-            // Inisialisasi extraChargeQty ke 0 untuk produk baru
-            inCart ? inCart.qty++ : cart.value.push({ ...product, qty: 1, extraCharge: 0, extraChargeQty: 0 });
-            globalSearchQuery.value = ""; searchResults.value = [];
-        };
+        // ... kode setup lainnya ...
+
+const addBySearch = (product) => {
+    // JIKA BERADA DI HALAMAN DAFTAR PRODUK
+    if (activePage.value === 'Daftar Produk') {
+        // Kirim ID saja agar cocok dengan fungsi .find() di DaftarProduk.js
+        window.dispatchEvent(new CustomEvent('open-product-detail', { 
+            detail: product.id 
+        }));
+        
+        // Reset pencarian agar dropdown tertutup
+        globalSearchQuery.value = ""; 
+        searchResults.value = [];
+        return;
+    }
+    
+    // JIKA BERADA DI HALAMAN PENJUALAN (KASIR)
+    const inCart = cart.value.find(item => item.id === product.id);
+    if (inCart) {
+        inCart.qty++;
+    } else {
+        // Inisialisasi properti jasa untuk produk baru di keranjang
+        cart.value.push({ 
+            ...product, 
+            qty: 1, 
+            extraCharge: 0, 
+            extraChargeQty: 0 
+        });
+    }
+
+    if (navigator.vibrate) navigator.vibrate(50); // Feedback getar kecil
+    globalSearchQuery.value = ""; 
+    searchResults.value = [];
+};
+
+// ... sisa kode app.js ...
+
 
         const selectPage = (name) => { 
             isOpen.value = false; 
