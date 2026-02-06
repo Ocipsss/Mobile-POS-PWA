@@ -1,4 +1,4 @@
-// components/pages/Pengaturan.js //
+// components/pages/Pengaturan.js
 const PagePengaturan = {
     setup() {
         const stats = Vue.ref({
@@ -7,39 +7,56 @@ const PagePengaturan = {
             members: 0
         });
 
-        const storeSettings = Vue.ref({
-            storeName: 'SINAR PAGI',
-            address: 'Jl. Raya Utama No. 01',
-            phone: '0812-3456-7890',
-            footerNote: 'Terima Kasih Atas Kunjungan Anda'
-        });
+        // Ambil data awal dari localStorage agar UI langsung terisi alamat yang benar
+        const getInitialSettings = () => {
+            const saved = localStorage.getItem('sinar_pagi_settings');
+            if (saved) {
+                try {
+                    return JSON.parse(saved);
+                } catch (e) {
+                    console.error("Gagal parse localStorage:", e);
+                }
+            }
+            return {
+                storeName: 'SINAR PAGI',
+                address: 'Jl. Raya Utama No. 01',
+                phone: '0812-3456-7890',
+                footerNote: 'Terima Kasih Atas Kunjungan Anda'
+            };
+        };
 
+        const storeSettings = Vue.ref(getInitialSettings());
+        
         // Objek untuk menyimpan referensi listener agar bisa dimatikan (unmount)
         const firebaseListeners = {};
 
         const loadAllData = async () => {
             // 1. LOAD CEPAT DARI LOKAL (IndexedDB)
-            // Ini agar user tidak melihat angka 0 saat aplikasi baru dibuka
-            stats.value.products = await db.products.count();
-            stats.value.transactions = await db.transactions.count();
-            stats.value.members = await db.members.count();
+            try {
+                stats.value.products = await db.products.count();
+                stats.value.transactions = await db.transactions.count();
+                stats.value.members = await db.members.count();
+            } catch (err) {
+                console.error("Gagal load stats lokal:", err);
+            }
 
             // 2. LOAD & LISTEN DARI CLOUD (Firebase)
             if (typeof fdb !== 'undefined') {
                 try {
-                    // Load Pengaturan Toko
+                    // Load Pengaturan Toko dari Cloud
                     const snapshot = await fdb.ref('settings/store').once('value');
                     const cloudData = snapshot.val();
                     if (cloudData) {
-                        storeSettings.value = cloudData;
+                        // Timpa data lokal dengan data Cloud jika ada
+                        storeSettings.value = { ...cloudData };
                         localStorage.setItem('sinar_pagi_settings', JSON.stringify(cloudData));
                     }
 
-                    // --- REAL-TIME STATS (Saran: Reaktif & Beban Rendah) ---
-                    // Menggunakan on('value') hanya menarik metadata jumlah, bukan isi data
+                    // --- REAL-TIME STATS ---
                     const tables = ['products', 'transactions', 'members'];
                     tables.forEach(table => {
-                        firebaseListeners[table] = fdb.ref(table).on('value', (snap) => {
+                        const ref = fdb.ref(table);
+                        firebaseListeners[table] = ref.on('value', (snap) => {
                             stats.value[table] = snap.numChildren();
                         });
                     });
@@ -52,22 +69,31 @@ const PagePengaturan = {
 
         const saveSettings = async () => {
             try {
-                localStorage.setItem('sinar_pagi_settings', JSON.stringify(storeSettings.value));
+                // 1. Simpan ke LocalStorage dulu (agar StrukNota.js langsung update)
+                const dataToSave = JSON.parse(JSON.stringify(storeSettings.value));
+                localStorage.setItem('sinar_pagi_settings', JSON.stringify(dataToSave));
+
+                // 2. Simpan ke Firebase Cloud
                 if (typeof fdb !== 'undefined') {
                     await fdb.ref('settings/store').set({
-                        ...storeSettings.value,
+                        ...dataToSave,
                         updatedAt: new Date().toISOString()
                     });
                 }
+                
                 alert("✅ Pengaturan Berhasil Disimpan!");
             } catch (err) {
-                alert("❌ Gagal: " + err.message);
+                alert("❌ Gagal Simpan: " + err.message);
             }
         };
 
         const handleExport = async () => {
-            const res = await BackupService.exportData();
-            if (res.success) alert(res.message);
+            try {
+                const res = await BackupService.exportData();
+                if (res.success) alert(res.message);
+            } catch (err) {
+                alert("Gagal Ekspor: " + err.message);
+            }
         };
 
         const handleImport = async (event) => {
@@ -86,10 +112,11 @@ const PagePengaturan = {
                 if (confirm("Yakin? Tindakan ini tidak bisa dibatalkan.")) {
                     try {
                         if (typeof fdb !== 'undefined') {
-                            const tables = ['products', 'categories', 'transactions', 'members', 'expenses', 'digital_transactions'];
+                            const tables = ['products', 'categories', 'transactions', 'members', 'expenses', 'digital_transactions', 'settings'];
                             for (const t of tables) await fdb.ref(t).remove();
                         }
-                        await db.delete(); // Menghapus seluruh database Dexie
+                        await db.delete(); 
+                        localStorage.removeItem('sinar_pagi_settings');
                         alert("Database dibersihkan. Aplikasi akan dimuat ulang.");
                         window.location.reload();
                     } catch (err) {
@@ -105,7 +132,9 @@ const PagePengaturan = {
         Vue.onUnmounted(() => {
             if (typeof fdb !== 'undefined') {
                 ['products', 'transactions', 'members'].forEach(table => {
-                    fdb.ref(table).off('value', firebaseListeners[table]);
+                    if (firebaseListeners[table]) {
+                        fdb.ref(table).off('value');
+                    }
                 });
             }
         });
@@ -136,7 +165,7 @@ const PagePengaturan = {
             <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2">Profil Toko</h4>
             <div class="bg-white p-6 rounded-[1.5rem] border border-gray-100 shadow-sm flex flex-col gap-4">
                 <div class="grid gap-4">
-                    <div class="group">
+                    <div>
                         <label class="text-[9px] font-black text-gray-400 uppercase ml-2 mb-1 block">Nama Toko</label>
                         <input v-model="storeSettings.storeName" type="text" class="w-full p-3 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-all outline-none">
                     </div>
@@ -164,7 +193,7 @@ const PagePengaturan = {
         <div class="flex flex-col gap-3">
             <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2">Sistem & Backup</h4>
             <div class="grid grid-cols-1 gap-3">
-                <div @click="handleExport" class="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 active:bg-gray-50 transition-all">
+                <div @click="handleExport" class="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 active:bg-gray-50 transition-all cursor-pointer">
                     <div class="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center text-xl"><i class="ri-download-cloud-line"></i></div>
                     <div class="flex-1"><div class="text-[11px] font-black text-gray-800 uppercase">Ekspor Data (.json)</div></div>
                 </div>
