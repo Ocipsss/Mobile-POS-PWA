@@ -303,7 +303,7 @@ const app = createApp({
 
         const transData = {
             id: transactionId, // Kunci utama transaksi
-            date: new Date().toISOString(),
+            date: new Date().toLocaleString('sv-SE'),
             total: total,
             memberId: selectedMember.value ? selectedMember.value.id : null,
             // Perbaikan: Pastikan item keranjang bersih dari nilai 'undefined'

@@ -22,15 +22,25 @@ const StrukNota = {
             return (Number(item.price_sell) || 0) + (Number(item.extraCharge) || 0);
         };
 
+        // Helper untuk format waktu agar seragam di template & bluetooth
+        const getDateTime = (dateSource) => {
+            const d = new Date(dateSource);
+            // Jika dateSource tidak valid, gunakan waktu sekarang
+            const validDate = isNaN(d.getTime()) ? new Date() : d;
+            
+            return {
+                date: validDate.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                time: validDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+            };
+        };
+
         // --- FUNGSI CETAK BLUETOOTH (ESC/POS) ---
         const printBluetooth = async (data) => {
             if (!props.printerCharacteristic) return false;
 
             try {
                 const encoder = new EscPosEncoder();
-                const dateObj = new Date(data.date);
-                const dateStr = dateObj.toLocaleDateString('id-ID');
-                const timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                const dt = getDateTime(data.date);
 
                 let result = encoder
                     .initialize()
@@ -41,24 +51,24 @@ const StrukNota = {
                     .line('-'.repeat(32))
                     .align('left')
                     .line(`Nota : #${data.id.toString().slice(-5)}`)
-                    .line(`Tgl  : ${dateStr} ${timeStr}`) // Penambahan Jam di sini
+                    .line(`Tgl  : ${dt.date} ${dt.time}`) 
                     .line(`Kasir: ${data.kasir || 'Admin'}`)
                     .line('-'.repeat(32));
 
                 data.items.forEach(item => {
                     result.line(item.name.toUpperCase());
-                    const detail = `${item.qty}x${getFinalPrice(item).toLocaleString()}`;
-                    const subtotal = (item.qty * getFinalPrice(item)).toLocaleString();
+                    const detail = `${item.qty}x${getFinalPrice(item).toLocaleString('id-ID')}`;
+                    const subtotal = (item.qty * getFinalPrice(item)).toLocaleString('id-ID');
                     result.line(detail.padEnd(20) + subtotal.padStart(12));
                 });
 
                 result.line('-'.repeat(32))
                     .align('right')
-                    .line(`TOTAL:   ${data.total.toLocaleString().padStart(12)}`);
+                    .line(`TOTAL:   ${data.total.toLocaleString('id-ID').padStart(12)}`);
 
                 if (data.paymentMethod === 'cash') {
-                    result.line(`BAYAR:   ${(data.amountPaid || 0).toLocaleString().padStart(12)}`)
-                          .line(`KEMBALI: ${(data.change || 0).toLocaleString().padStart(12)}`);
+                    result.line(`BAYAR:   ${(data.amountPaid || 0).toLocaleString('id-ID').padStart(12)}`)
+                          .line(`KEMBALI: ${(data.change || 0).toLocaleString('id-ID').padStart(12)}`);
                 } else {
                     result.line(`METODE:  ${(data.paymentMethod || 'NON-TUNAI').toUpperCase().padStart(12)}`);
                 }
@@ -73,8 +83,7 @@ const StrukNota = {
                 }
 
                 result.newline()
-                    .cut()
-                    .encode();
+                    .cut();
 
                 const fullData = result.encode();
                 const chunkSize = 20; 
@@ -91,7 +100,7 @@ const StrukNota = {
 
                 return true;
             } catch (err) {
-                console.error("Gagal kirim data:", err);
+                console.error("Gagal kirim data Bluetooth:", err);
                 return false;
             }
         };
@@ -120,7 +129,7 @@ const StrukNota = {
             });
         });
 
-        return { localSettings, getFinalPrice, currentData, reprintData };
+        return { localSettings, getFinalPrice, currentData, reprintData, getDateTime };
     },
     template: `
     <div id="print-section" class="print-only">
@@ -136,11 +145,11 @@ const StrukNota = {
             <div style="font-size: 10px; margin: 5px 0;">
                 <div style="display: flex; justify-content: space-between;">
                     <span>#{{ currentData.id.toString().slice(-5) }}</span>
-                    <span>{{ new Date(currentData.date).toLocaleDateString('id-ID') }}</span>
+                    <span>{{ getDateTime(currentData.date).date }}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between;">
                     <span>Kasir: {{ currentData.kasir || 'Admin' }}</span>
-                    <span>{{ new Date(currentData.date).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}) }}</span>
+                    <span>{{ getDateTime(currentData.date).time }}</span>
                 </div>
             </div>
 
@@ -181,7 +190,7 @@ const StrukNota = {
             
             <div style="text-align: center; font-size: 9px; margin-top: 5px;">
                 <div>{{ localSettings.footerNote }}</div>
-                <div v-if="reprintData" style="font-weight: bold; margin-top: 5px;">** SALINAN NOTA **</div>
+                <div v-if="reprintData" style="font-weight: bold; margin-top: 5px;">** HATUR NUHUN **</div>
             </div>
         </div>
     </div>
