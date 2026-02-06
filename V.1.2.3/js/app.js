@@ -413,8 +413,8 @@ const app = createApp({
             if (isRokok && packages.length > 0) {
                 pendingProduct.value = product;
                 packageOptions.value = [
-                    { id: 'base', name: `1 ${product.unit} (Utama)`, price_sell: product.price_sell, qty_pcs: 1 },
-                    ...packages
+                    { id: 'base', name: product.unit, price_sell: product.price_sell, qty_pcs: 1 },
+    ...packages
                 ];
                 isPackageModalOpen.value = true;
             } else {
@@ -441,7 +441,7 @@ const app = createApp({
                 cart.value.push({ 
                     ...product, 
                     cartId: cartId,
-                    name: displayName === product.unit ? product.name : `${product.name} (${displayName})`,
+                    name: displayName === product.unit ? product.name : `${product.name} ${displayName}`,
                     price_sell: price,
                     qty: 1, 
                     qty_reduce: qtyToReduce, 
