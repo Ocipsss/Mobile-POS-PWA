@@ -78,7 +78,7 @@ const StrukNota = {
                     .newline();
                 
                 if (reprintData.value) {
-                    result.line("** SALINAN NOTA **").newline();
+                    result.line("** HATUR NUHUN **").newline();
                 }
 
                 result.newline()
