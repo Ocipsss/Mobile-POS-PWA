@@ -51,8 +51,7 @@ const StrukNota = {
                     .line('-'.repeat(32))
                     .align('left')
                     .line(`Nota : #${data.id.toString().slice(-5)}`)
-                    .line(`Tgl  : ${dt.date} ${dt.time}`) 
-                    .line(`Kasir: ${data.kasir || 'Admin'}`)
+                    .line(`Tgl  : ${dt.date} ${dt.time}`)
                     .line('-'.repeat(32));
 
                 data.items.forEach(item => {
