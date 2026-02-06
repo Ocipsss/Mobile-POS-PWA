@@ -1,3 +1,140 @@
+TAHAP 1:
+1. struktur:
+.
+├── components
+│   ├── GlobalSearch.js
+│   ├── Layout.js
+│   ├── Placeholder.js
+│   └── pages
+│       ├── ArusUang.js
+│       ├── DaftarProduk.js
+│       ├── Dashboard.js
+│       ├── DataJasa.js
+│       ├── DataKasir.js
+│       ├── DataMember.js
+│       ├── DataSuplier.js
+│       ├── DigitalSvc.js
+│       ├── HargaGrosir.js
+│       ├── HargaPaket.js
+│       ├── KategoriProduk.js
+│       ├── LaporanBulanan.js
+│       ├── LaporanHarian.js
+│       ├── LaporanLabaRugi.js
+│       ├── LaporanMingguan.js
+│       ├── PaketProduk.js
+│       ├── Pemasukan.js
+│       ├── Pengaturan.js
+│       ├── Pengeluaran.js
+│       ├── Penjualan.js
+│       ├── PiutangPenjualan.js
+│       ├── StockMonitor.js
+│       ├── StrukNota.js
+│       ├── TambahProduk.js
+│       ├── TotalSaldo.js
+│       └── Transaksi.js
+├── css
+│   └── style.css
+├── icon-192.png
+├── icon-512.png
+├── index.html
+├── js
+│   ├── app.js
+│   ├── backup.js
+│   ├── database.js
+│   └── routes.js
+├── lib
+│   ├── dayjs.min.js
+│   ├── dexie.min.js
+│   ├── esc-pos-encoder.js
+│   ├── font-awesome.min.css
+│   ├── html5-qrcode.min.js
+│   ├── pico.min.css
+│   ├── remixicon.css
+│   ├── remixicon.svg
+│   ├── remixicon.ttf
+│   ├── remixicon.woff
+│   ├── remixicon.woff2
+│   ├── tailwind.css
+│   ├── unocss.js
+│   ├── vue.js
+│   └── workbox-sw.js
+├── manifest.json
+├── struktur.txt
+└── sw.js
+
+2. components/GlobalSearch.js:
+// components/GlobalSearch.js
+const GlobalSearchComponent = {
+    props: ['modelValue', 'placeholder'],
+    emits: ['update:modelValue'],
+    template: `
+        <div class="relative flex items-center group w-full">
+            <input 
+                :value="modelValue" 
+                @input="$emit('update:modelValue', $event.target.value)"
+                type="text" 
+                :placeholder="placeholder || 'Cari...'" 
+                class="w-full pl-4 pr-20 py-3 bg-white border border-gray-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-sm !mb-0"
+            >
+            <div class="absolute right-3 flex items-center gap-2">
+                <button v-if="modelValue" @click="$emit('update:modelValue', '')" class="w-7 h-7 flex items-center justify-center bg-gray-100 rounded-full border-none">
+                    <i class="ri-close-line text-gray-500"></i>
+                </button>
+                <i class="ri-search-2-line text-gray-400 group-focus-within:text-blue-500 text-lg mr-1"></i>
+            </div>
+        </div>
+    `
+};
+
+3. components/Layout.js:
+// components/Layout.js
+const SidebarComponent = {
+    props: ['groups', 'activePage'],
+    template: `
+        <div class="back-menu">
+            <div class="brand-section">
+                <span class="brand-name">SINAR PAGI</span>
+            </div>
+            <div v-for="group in groups" :key="group.title">
+                <div class="menu-group-title">{{ group.title }}</div>
+                <ul class="menu-list">
+                    <li v-for="m in group.items" 
+                        class="menu-item" 
+                        :class="{ active: activePage === m.name }"
+                        @click="$emit('select-page', m.name)"> 
+                        <i :class="m.icon"></i>
+                        <span>{{ m.name }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    `
+};
+
+4. components/Placeholder.js:
+//components/Placeholder.js
+const PlaceholderComponent = {
+    props: ['pageName'],
+    template: `
+        <div class="flex flex-col items-center justify-center py-20 text-center opacity-40">
+            <div class="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-6">
+                <i class="ri-tools-line text-5xl text-gray-500"></i>
+            </div>
+            <h4 class="m-0 text-gray-800 text-xl font-bold">{{ pageName }}</h4>
+            <p class="text-sm text-gray-600 mt-2">
+                Halaman ini sedang dalam tahap pengembangan <br> 
+                oleh tim Sinar Pagi.
+            </p>
+            <div class="mt-8 px-6 py-2 border-2 border-dashed border-gray-300 rounded-lg">
+                <span class="text-[10px] font-mono text-gray-500 uppercase tracking-widest">
+                    Module: modules/{{ pageName.replace(/\s+/g, '-').toLowerCase() }}.js
+                </span>
+            </div>
+        </div>
+    `
+};
+
+5. index.html:
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -125,28 +262,6 @@
             </main>
         </div>
 
-        <div v-if="isPackageModalOpen" class="fixed inset-0 z-[1002] flex items-end justify-center bg-black/60 backdrop-blur-sm" @click.self="isPackageModalOpen = false">
-            <div class="bg-white w-full max-w-md rounded-t-[32px] p-8 animate-slide-up shadow-2xl">
-                <div class="flex justify-between items-center mb-6">
-                    <div>
-                        <h3 class="text-lg font-black text-gray-800 uppercase tracking-tight">{{ pendingProduct?.name }}</h3>
-                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Pilih Satuan Jual</p>
-                    </div>
-                    <button @click="isPackageModalOpen = false" class="bg-gray-100 border-none w-10 h-10 rounded-full flex items-center justify-center"><i class="ri-close-line"></i></button>
-                </div>
-                
-                <div class="grid grid-cols-1 gap-3">
-                    <button v-for="pkg in packageOptions" :key="pkg.id" @click="selectPackage(pkg)" class="p-5 border-2 border-gray-100 rounded-[1.5rem] flex justify-between items-center active:border-blue-500 active:bg-blue-50 transition-all text-left">
-                        <div>
-                            <div class="text-sm font-black text-gray-800 uppercase">{{ pkg.name }}</div>
-                            <div class="text-[10px] text-gray-400 font-bold uppercase">{{ pkg.qty_pcs }} Porsi / Pcs</div>
-                        </div>
-                        <div class="text-md font-black text-blue-600">Rp {{ pkg.price_sell.toLocaleString('id-ID') }}</div>
-                    </button>
-                </div>
-            </div>
-        </div>
-
         <div v-if="isScannerOpen" class="fixed inset-0 z-[9999] bg-white flex flex-col p-6 animate-zoom-in">
             <div class="flex justify-between items-center mb-6">
                 <div class="flex flex-col">
@@ -245,7 +360,7 @@
 <script src="components/pages/DaftarProduk.js"></script>
 <script src="components/pages/TambahProduk.js"></script>
 <script src="components/pages/KategoriProduk.js"></script>
-<script src="components/pages/HargaPaket.js"></script> <script src="components/pages/DataMember.js"></script>
+<script src="components/pages/DataMember.js"></script>
 <script src="components/pages/DataJasa.js"></script>
 <script src="components/pages/Pengaturan.js"></script>
 <script src="components/pages/LaporanHarian.js"></script>
@@ -282,3 +397,90 @@
 </script>
 </body>
 </html>
+
+6. manifest.json:
+{
+  "name": "Sinar Pagi App",
+  "short_name": "Kadut",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+
+7. sw.js:
+// v.04-01-26 new //
+const CACHE_NAME = 'sinar-pagi-v10'; // Naikkan versi ke v10
+
+const ASSETS_TO_CACHE = [
+    '/',
+    '/index.html',
+    '/css/style.css',
+    '/js/app.js',
+    '/js/database.js',
+    '/js/routes.js',
+    '/lib/vue.js',
+    '/lib/dexie.min.js',
+    '/lib/unocss.js',
+    '/lib/pico.min.css',
+    '/lib/remixicon.css',
+    '/manifest.json'
+];
+
+// Install: Langsung aktifkan SW baru
+self.addEventListener('install', (event) => {
+    self.skipWaiting(); 
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE))
+    );
+});
+
+// Activate: Bersihkan cache lama
+self.addEventListener('activate', (event) => {
+    event.waitUntil(
+        caches.keys().then((keys) => {
+            return Promise.all(
+                keys.map((key) => {
+                    if (key !== CACHE_NAME) return caches.delete(key);
+                })
+            );
+        }).then(() => self.clients.claim())
+    );
+});
+
+// Fetch: Strategi Stale-While-Revalidate
+self.addEventListener('fetch', (event) => {
+    if (event.request.url.includes('firebase') || event.request.url.includes('firestore')) return;
+
+    event.respondWith(
+        caches.match(event.request).then((cachedResponse) => {
+            const fetchPromise = fetch(event.request).then((networkResponse) => {
+                // Update cache di latar belakang
+                if (networkResponse && networkResponse.status === 200) {
+                    const responseClone = networkResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseClone);
+                    });
+                }
+                return networkResponse;
+            }).catch(() => null);
+
+            // Kembalikan cache jika ada (Instant), jika tidak tunggu network
+            return cachedResponse || fetchPromise;
+        })
+    );
+});
+
+// end v.04-01-26 new //

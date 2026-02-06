@@ -28,15 +28,21 @@ const StrukNota = {
 
             try {
                 const encoder = new EscPosEncoder();
+                const dateObj = new Date(data.date);
+                const dateStr = dateObj.toLocaleDateString('id-ID');
+                const timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
                 let result = encoder
                     .initialize()
                     .align('center')
-                    .line(localSettings.value.storeName)
+                    .line(localSettings.value.storeName.toUpperCase())
                     .line(localSettings.value.address)
+                    .line(localSettings.value.phone)
                     .line('-'.repeat(32))
                     .align('left')
-                    .line(`Nota: #${data.id.toString().slice(-5)}`)
-                    .line(`Tgl : ${new Date(data.date).toLocaleDateString('id-ID')}`)
+                    .line(`Nota : #${data.id.toString().slice(-5)}`)
+                    .line(`Tgl  : ${dateStr} ${timeStr}`) // Penambahan Jam di sini
+                    .line(`Kasir: ${data.kasir || 'Admin'}`)
                     .line('-'.repeat(32));
 
                 data.items.forEach(item => {
@@ -50,7 +56,6 @@ const StrukNota = {
                     .align('right')
                     .line(`TOTAL:   ${data.total.toLocaleString().padStart(12)}`);
 
-                // --- PENAMBAHAN BAGIAN BAYAR & KEMBALI ---
                 if (data.paymentMethod === 'cash') {
                     result.line(`BAYAR:   ${(data.amountPaid || 0).toLocaleString().padStart(12)}`)
                           .line(`KEMBALI: ${(data.change || 0).toLocaleString().padStart(12)}`);
@@ -61,8 +66,13 @@ const StrukNota = {
                 result.align('center')
                     .newline()
                     .line(localSettings.value.footerNote)
-                    .newline()
-                    .newline()
+                    .newline();
+                
+                if (reprintData.value) {
+                    result.line("** SALINAN NOTA **").newline();
+                }
+
+                result.newline()
                     .cut()
                     .encode();
 

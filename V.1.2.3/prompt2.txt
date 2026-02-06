@@ -1,0 +1,27 @@
+TAHAP 2:
+1. components/ArusUang.js:
+
+2. components/DaftarProduk.js:
+
+3. components/Dashboard.js:
+
+4. components/DataJasa.js:
+
+5. components/DataMember.js:
+
+6. components/DigitalSvc.js:
+
+7. components/
+8. components/
+9. components/
+10. components/
+11. components/
+12. components/
+13. components/
+14. components/
+15. components/
+16. components/
+17. components/
+18. components/
+19. components/
+20. components/
