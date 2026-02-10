@@ -131,7 +131,10 @@ const PageTambahProduk = {
                 product.value = { id: '', image: null, name: '', code: '', category: 'Umum', unit: 'pcs', price_modal: 0, price_sell: 0, qty: 0, pack_price: 0, pack_size: 1 };
                 displayModal.value = ""; displaySell.value = ""; displayPack.value = "";
                 
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                const scrollContainer = document.querySelector('.content-scroll');
+if (scrollContainer) {
+    scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+}
                 
             } catch (err) { 
                 alert("Gagal menyimpan: " + err.message); 
