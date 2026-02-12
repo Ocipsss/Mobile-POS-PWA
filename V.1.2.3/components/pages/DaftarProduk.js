@@ -1,5 +1,5 @@
 // components/pages/DaftarProduk.js //
-// v1.9 - Sistem UID Anti-Tabrakan Perangkat //
+// v1.9.1 - Ditambahkan Fitur Edit Kategori //
 
 const PageDaftarProduk = {
     setup(props, { emit }) {
@@ -16,7 +16,7 @@ const PageDaftarProduk = {
 
         const loadData = async () => {
             try {
-                // Memuat semua produk dari Dexie lokal
+                // Memuat semua produk dan kategori dari Dexie
                 products.value = await db.products.toArray();
                 listCategories.value = await db.categories.toArray();
             } catch (err) {
@@ -56,7 +56,6 @@ const PageDaftarProduk = {
         const updateProduct = async () => {
             try {
                 // Simpan perubahan ke Dexie. 
-                // Karena Hooks sudah aktif di database.js, Firebase akan terupdate otomatis.
                 await db.products.put(JSON.parse(JSON.stringify(editingProduct.value)));
                 
                 isEditModalOpen.value = false;
@@ -70,7 +69,6 @@ const PageDaftarProduk = {
         const deleteProduct = async (id) => {
             if (confirm("Hapus produk ini secara permanen?")) {
                 try {
-                    // Hapus di Dexie. Hooks akan otomatis menghapus di Firebase juga.
                     await db.products.delete(id);
                     isDetailModalOpen.value = false;
                     await loadData();
@@ -89,7 +87,6 @@ const PageDaftarProduk = {
         };
 
         const handleOpenDetailEvent = (e) => {
-            // Mencari produk berdasarkan ID yang dikirim dari search global
             const p = products.value.find(item => item.id === e.detail);
             if (p) openDetail(p);
         };
@@ -197,6 +194,16 @@ const PageDaftarProduk = {
                         <div class="form-group">
                             <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block tracking-widest">Nama Produk</label>
                             <input v-model="editingProduct.name" type="text" class="form-control !rounded-2xl bg-gray-50 border-none py-3 font-bold">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="text-[10px] font-black text-gray-400 uppercase mb-1 block tracking-widest">Kategori</label>
+                            <select v-model="editingProduct.category" class="form-control !rounded-2xl bg-gray-50 border-none py-3 font-bold w-full appearance-none">
+                                <option value="">Tanpa Kategori</option>
+                                <option v-for="cat in listCategories" :key="cat.id" :value="cat.name">
+                                    {{ cat.name }}
+                                </option>
+                            </select>
                         </div>
 
                         <div class="grid grid-cols-2 gap-3">

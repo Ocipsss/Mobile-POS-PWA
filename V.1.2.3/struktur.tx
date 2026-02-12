@@ -1,0 +1,66 @@
+.
+├── components
+│   ├── GlobalSearch.js
+│   ├── Layout.js
+│   ├── Placeholder.js
+│   └── pages
+│       ├── ArusUang.js
+│       ├── DaftarProduk.js
+│       ├── Dashboard.js
+│       ├── DataJasa.js
+│       ├── DataKasir.js
+│       ├── DataMember.js
+│       ├── DataSuplier.js
+│       ├── DigitalSvc.js
+│       ├── HargaGrosir.js
+│       ├── HargaPaket.js
+│       ├── KategoriProduk.js
+│       ├── LaporanBulanan.js
+│       ├── LaporanHarian.js
+│       ├── LaporanLabaRugi.js
+│       ├── LaporanMingguan.js
+│       ├── PaketProduk.js
+│       ├── Pemasukan.js
+│       ├── Pengaturan.js
+│       ├── Pengeluaran.js
+│       ├── Penjualan.js
+│       ├── PiutangPenjualan.js
+│       ├── StockMonitor.js
+│       ├── StrukNota.js
+│       ├── TambahProduk.js
+│       ├── TotalSaldo.js
+│       └── Transaksi.js
+├── css
+│   └── style.css
+├── icon-192.png
+├── icon-512.png
+├── index.html
+├── js
+│   ├── app.js
+│   ├── backup.js
+│   ├── database.js
+│   └── routes.js
+├── lib
+│   ├── dayjs.min.js
+│   ├── dexie.min.js
+│   ├── esc-pos-encoder.js
+│   ├── font-awesome.min.css
+│   ├── html5-qrcode.min.js
+│   ├── pico.min.css
+│   ├── remixicon.css
+│   ├── remixicon.svg
+│   ├── remixicon.ttf
+│   ├── remixicon.woff
+│   ├── remixicon.woff2
+│   ├── tailwind.css
+│   ├── unocss.js
+│   ├── vue.js
+│   └── workbox-sw.js
+├── manifest.json
+├── prompt2.txt
+├── promt1.txt
+├── struktur.tx
+├── struktur.txt
+└── sw.js
+
+6 directories, 58 files
