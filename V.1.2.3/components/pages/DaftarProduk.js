@@ -15,14 +15,17 @@ const PageDaftarProduk = {
         const displaySell = Vue.ref("");
 
         const loadData = async () => {
-            try {
-                // Memuat semua produk dan kategori dari Dexie
-                products.value = await db.products.toArray();
-                listCategories.value = await db.categories.toArray();
-            } catch (err) {
-                console.error("Gagal memuat data:", err);
-            }
-        };
+    try {
+        // Mengambil produk langsung terurut A-Z berdasarkan index 'name'
+        products.value = await db.products.orderBy('name').toArray();
+        
+        // Memuat kategori
+        listCategories.value = await db.categories.toArray();
+    } catch (err) {
+        console.error("Gagal memuat data:", err);
+    }
+};
+
 
         const formatRupiahDisplay = (val) => {
             if (!val && val !== 0) return "";
