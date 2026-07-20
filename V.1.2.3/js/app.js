@@ -496,4 +496,4 @@ const app = createApp({
         }
     }
 });
-app.mount('#app');
+window.VueApp = app.mount('#app');

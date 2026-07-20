@@ -75,6 +75,11 @@
                                 <i class="ri-cloud-line text-[10px]" :style="{ color: isCloudOnline ? '#22c55e' : '#f43f5e' }"></i>
                                 <span class="text-[7px] font-black uppercase text-gray-400 tracking-widest">{{ isCloudOnline ? 'Cloud' : 'Local' }}</span>
                             </div>
+                          <div id="toggle-scan" class="flex items-center gap-1 cursor-pointer">
+    <i id="scanner-icon" class="ri-barcode-box-line text-[10px] text-blue-500"></i>
+    <span class="text-[7px] font-black uppercase text-gray-400 tracking-widest">SCANNER</span>
+</div>
+
                             <div @click.stop="connectPrinter" class="flex items-center gap-1 cursor-pointer">
                                 <i class="ri-printer-line text-[10px]" :class="isPrinterConnected ? 'text-green-500' : 'text-gray-300'"></i>
                                 <span class="text-[7px] font-black uppercase tracking-widest" :class="isPrinterConnected ? 'text-green-500' : 'text-gray-400'">{{ isPrinterConnected ? 'PRINTER' : 'OFF' }}</span>
@@ -259,6 +264,7 @@
 <script src="components/pages/DigitalSvc.js"></script>
 <script src="components/pages/Transaksi.js"></script>
 <script src="js/app.js"></script>
+<script src="js/scanner-handler.js"></script>
 
 <script>
     if ('serviceWorker' in navigator) {
