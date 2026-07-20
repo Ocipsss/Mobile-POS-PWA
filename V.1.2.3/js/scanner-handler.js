@@ -1,5 +1,5 @@
 /**
- * MPP Scanner Handler (Optimized for Sinar Pagi POS)
+ * MPP Scanner Handler (Fixed for Sinar Pagi POS)
  * Mengelola input dari scanner fisik (HID Mode)
  */
 
@@ -7,7 +7,7 @@ let barcode = '';
 let lastKeyTime = Date.now();
 let isScanModeActive = true;
 
-// 1. Logika Tombol Toggle UI
+// 1. Toggle Button Handler
 document.addEventListener('DOMContentLoaded', () => {
     const toggleBtn = document.getElementById('toggle-scan');
     if (toggleBtn) {
@@ -19,11 +19,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// 2. Listener Utama Tangkap Kecepatan Ketik Scanner Fisik
+// 2. Listener Kecepatan Ketik Scanner
 document.addEventListener('keydown', (e) => {
     if (!isScanModeActive) return;
 
-    // Abaikan jika pengguna sedang mengetik biasa di dalam form input/textarea/select
+    // Abaikan jika user sedang fokus mengetik manual di input/textarea
     const activeEl = document.activeElement;
     const isTypingInInput = activeEl && (
         activeEl.tagName === 'INPUT' || 
@@ -33,23 +33,19 @@ document.addEventListener('keydown', (e) => {
 
     const currentTime = Date.now();
     
-    // Kecepatan scanner biasanya < 30ms-50ms per karakter
+    // Reset jika jeda antar karakter > 50ms (karakter manusia)
     if (currentTime - lastKeyTime > 50) {
         barcode = '';
     }
 
     if (e.key === 'Enter') {
         if (barcode.length > 0) {
-            // Mencegah aksi submit bawaan browser/form
-            e.preventDefault();
-            
+            e.preventDefault(); // Mencegah submit form bawaan browser
             handleScannerInput(barcode.trim());
-            barcode = ''; // Reset buffer
+            barcode = ''; 
         }
     } else {
-        // Hanya rekam karakter tunggal & abaikan tombol navigasi/modifier (Shift, Ctrl, Alt)
         if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
-            // Jika sedang mengetik biasa di input form, jangan potong alurnya
             if (!isTypingInInput || (currentTime - lastKeyTime < 30)) {
                 barcode += e.key;
             }
@@ -59,21 +55,38 @@ document.addEventListener('keydown', (e) => {
     lastKeyTime = currentTime;
 });
 
-// 3. Routing Input Scanner ke Sistem Sinar Pagi POS
+// 3. Routing Input Scanner
 async function handleScannerInput(scannedCode) {
     console.log("Barcode Terdeteksi:", scannedCode);
 
-    if (navigator.vibrate) navigator.vibrate(80); // Feedback getar jika di mobile/tablet
+    if (navigator.vibrate) navigator.vibrate(80);
 
-    // A. Jika di Halaman "Daftar Produk" -> Kirim Event Edit Produk
     const activePage = window.VueApp ? window.VueApp.activePage : '';
-    
+
+    // -------------------------------------------------------------
+    // A. JIKA DI HALAMAN "DAFTAR PRODUK"
+    // -------------------------------------------------------------
     if (activePage === 'Daftar Produk') {
-        window.dispatchEvent(new CustomEvent('barcode-scanned-edit', { detail: scannedCode }));
+        if (typeof db !== 'undefined') {
+            try {
+                // Cari produk berdasarkan KODE BARCODE
+                const product = await db.products.where('code').equals(scannedCode).first();
+                if (product) {
+                    // Kirim ID produk ke listener DaftarProduk.js
+                    window.dispatchEvent(new CustomEvent('open-product-detail', { detail: product.id }));
+                } else {
+                    alert(`⚠️ Produk dengan barcode "${scannedCode}" tidak ditemukan di daftar!`);
+                }
+            } catch (err) {
+                console.error("Gagal scan di Daftar Produk:", err);
+            }
+        }
         return;
     } 
 
-    // B. Jika di Halaman "Tambah Produk" -> Isikan ke Field Barcode Form
+    // -------------------------------------------------------------
+    // B. JIKA DI HALAMAN "TAMBAH PRODUK"
+    // -------------------------------------------------------------
     if (activePage === 'Tambah Produk') {
         const inputBarcode = document.querySelector('input[placeholder*="Scan atau manual"]');
         if (inputBarcode) {
@@ -83,12 +96,13 @@ async function handleScannerInput(scannedCode) {
         return;
     }
 
-    // C. Default (Di Halaman Penjualan / Kasir): Cari produk & Masukkan ke Keranjang
+    // -------------------------------------------------------------
+    // C. JIKA DI HALAMAN "PENJUALAN" / KASIR (DEFAULT)
+    // -------------------------------------------------------------
     if (typeof db !== 'undefined') {
         try {
             const product = await db.products.where('code').equals(scannedCode).first();
             if (product) {
-                // Memanggil fungsi addBySearch() milik Instance App Vue
                 if (window.VueApp && typeof window.VueApp.addBySearch === 'function') {
                     window.VueApp.addBySearch(product);
                 }
