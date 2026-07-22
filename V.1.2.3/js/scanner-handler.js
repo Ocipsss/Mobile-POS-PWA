@@ -1,5 +1,5 @@
 /**
- * MPP Scanner Handler (Final - Direct VueApp Access)
+ * MPP Scanner Handler (Final - Retry DOM & Reliable Auto-Fill)
  * Mengelola input dari scanner fisik (HID Mode)
  */
 
@@ -60,7 +60,6 @@ async function handleScannerInput(scannedCode) {
 
     if (navigator.vibrate) navigator.vibrate(80);
 
-    // Ambil instansi Vue yang di-mount di window.VueApp
     const vueApp = window.VueApp;
     const activePage = vueApp ? vueApp.activePage : '';
 
@@ -87,7 +86,7 @@ async function handleScannerInput(scannedCode) {
     // B. JIKA DI HALAMAN "TAMBAH PRODUK"
     // -------------------------------------------------------------
     if (activePage === 'Tambah Produk') {
-        isiInputBarcode(scannedCode);
+        isiInputBarcodeWithRetry(scannedCode);
         return;
     }
 
@@ -100,7 +99,7 @@ async function handleScannerInput(scannedCode) {
             
             if (product) {
                 if (vueApp) {
-                    // 1. Pindahkan halaman ke Penjualan jika sedang di luar Penjualan
+                    // Pindahkan halaman ke Penjualan jika sedang di luar Penjualan
                     if (vueApp.activePage !== 'Penjualan') {
                         if (typeof vueApp.selectPage === 'function') {
                             vueApp.selectPage('Penjualan');
@@ -109,7 +108,7 @@ async function handleScannerInput(scannedCode) {
                         }
                     }
 
-                    // 2. Tambahkan ke keranjang belanja
+                    // Tambahkan ke keranjang belanja
                     setTimeout(() => {
                         if (typeof vueApp.addBySearch === 'function') {
                             vueApp.addBySearch(product);
@@ -130,12 +129,26 @@ async function handleScannerInput(scannedCode) {
 // HELPER FUNCTIONS
 // -------------------------------------------------------------
 
-// Helper untuk mengisi kolom barcode pada halaman Tambah Produk
-function isiInputBarcode(code) {
+// Helper dengan mekanisme "Retry": terus mencari elemen input sampai DOM siap
+function isiInputBarcodeWithRetry(code, attempts = 0) {
     const inputBarcode = document.querySelector('input[placeholder*="Scan atau manual"]');
+    
     if (inputBarcode) {
-        inputBarcode.value = code;
+        // Gunakan setter bawaan agar V-Model Vue mendeteksi perubahan nilai secara otomatis
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+        nativeInputValueSetter.call(inputBarcode, code);
+
         inputBarcode.dispatchEvent(new Event('input', { bubbles: true }));
+        inputBarcode.dispatchEvent(new Event('change', { bubbles: true }));
+
+        // Fokus ke input Nama Produk jika ada
+        const inputNama = document.querySelector('input[placeholder*="Indomie"]') || document.querySelector('input[v-model="product.name"]');
+        if (inputNama) inputNama.focus();
+
+        console.log("Kode berhasil ditempelkan:", code);
+    } else if (attempts < 10) {
+        // Jika elemen belum siap, coba lagi setiap 50ms (maksimal 10x percobaan)
+        setTimeout(() => isiInputBarcodeWithRetry(code, attempts + 1), 50);
     }
 }
 
@@ -154,11 +167,7 @@ function promptTambahProduk(scannedCode, vueApp) {
             vueApp.activePage = 'Tambah Produk';
         }
 
-        // Isikan kode barcode ke input form secara otomatis
-        setTimeout(() => {
-            isiInputBarcode(scannedCode);
-            const inputNama = document.querySelector('input[placeholder*="Indomie"]');
-            if (inputNama) inputNama.focus();
-        }, 150);
+        // Panggil fungsi pencari elemen dengan pola Retry
+        isiInputBarcodeWithRetry(scannedCode);
     }
 }
