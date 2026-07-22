@@ -1,21 +1,25 @@
 /**
- * MPP Scanner Handler (Fixed for Sinar Pagi POS)
+ * MPP Scanner Handler (Final - Direct VueApp Access)
+ * Mengelola input dari scanner fisik (HID Mode)
  */
 
 let barcode = '';
 let lastKeyTime = Date.now();
 let isScanModeActive = true;
 
+// 1. Logika Tombol Toggle UI
 document.addEventListener('DOMContentLoaded', () => {
     const toggleBtn = document.getElementById('toggle-scan');
     if (toggleBtn) {
         toggleBtn.addEventListener('click', () => {
             isScanModeActive = !isScanModeActive;
             toggleBtn.style.opacity = isScanModeActive ? "1" : "0.5";
+            console.log("Scanner Mode:", isScanModeActive ? "Aktif" : "Nonaktif");
         });
     }
 });
 
+// 2. Listener Kecepatan Ketik Scanner Fisik
 document.addEventListener('keydown', (e) => {
     if (!isScanModeActive) return;
 
@@ -28,13 +32,14 @@ document.addEventListener('keydown', (e) => {
 
     const currentTime = Date.now();
     
+    // Reset jika jeda antar karakter > 50ms (simulasi pengetikan manusia)
     if (currentTime - lastKeyTime > 50) {
         barcode = '';
     }
 
     if (e.key === 'Enter') {
         if (barcode.length > 0) {
-            e.preventDefault();
+            e.preventDefault(); // Mencegah form submit/reload
             handleScannerInput(barcode.trim());
             barcode = ''; 
         }
@@ -49,12 +54,15 @@ document.addEventListener('keydown', (e) => {
     lastKeyTime = currentTime;
 });
 
+// 3. Routing Input Scanner
 async function handleScannerInput(scannedCode) {
     console.log("Barcode Terdeteksi:", scannedCode);
 
     if (navigator.vibrate) navigator.vibrate(80);
 
-    const activePage = window.VueApp ? window.VueApp.activePage : '';
+    // Ambil instansi Vue yang di-mount di window.VueApp
+    const vueApp = window.VueApp;
+    const activePage = vueApp ? vueApp.activePage : '';
 
     // -------------------------------------------------------------
     // A. JIKA DI HALAMAN "DAFTAR PRODUK"
@@ -62,16 +70,11 @@ async function handleScannerInput(scannedCode) {
     if (activePage === 'Daftar Produk') {
         if (typeof db !== 'undefined') {
             try {
-                // Cari produk berdasarkan KODE BARCODE di IndexedDB
                 const product = await db.products.where('code').equals(scannedCode).first();
-                
                 if (product) {
-                    // Kirimkan Event dengan ID Produk
-                    window.dispatchEvent(new CustomEvent('open-product-detail', { 
-                        detail: product.id 
-                    }));
+                    window.dispatchEvent(new CustomEvent('open-product-detail', { detail: product.id }));
                 } else {
-                    alert(`⚠️ Produk dengan barcode "${scannedCode}" tidak ditemukan!`);
+                    promptTambahProduk(scannedCode, vueApp);
                 }
             } catch (err) {
                 console.error("Gagal scan di Daftar Produk:", err);
@@ -84,29 +87,78 @@ async function handleScannerInput(scannedCode) {
     // B. JIKA DI HALAMAN "TAMBAH PRODUK"
     // -------------------------------------------------------------
     if (activePage === 'Tambah Produk') {
-        const inputBarcode = document.querySelector('input[placeholder*="Scan atau manual"]');
-        if (inputBarcode) {
-            inputBarcode.value = scannedCode;
-            inputBarcode.dispatchEvent(new Event('input', { bubbles: true }));
-        }
+        isiInputBarcode(scannedCode);
         return;
     }
 
     // -------------------------------------------------------------
-    // C. JIKA DI HALAMAN "PENJUALAN" / KASIR
+    // C. JIKA DI HALAMAN LAIN (Penjualan, Dashboard, Stock Monitor, dll)
     // -------------------------------------------------------------
     if (typeof db !== 'undefined') {
         try {
             const product = await db.products.where('code').equals(scannedCode).first();
+            
             if (product) {
-                if (window.VueApp && typeof window.VueApp.addBySearch === 'function') {
-                    window.VueApp.addBySearch(product);
+                if (vueApp) {
+                    // 1. Pindahkan halaman ke Penjualan jika sedang di luar Penjualan
+                    if (vueApp.activePage !== 'Penjualan') {
+                        if (typeof vueApp.selectPage === 'function') {
+                            vueApp.selectPage('Penjualan');
+                        } else {
+                            vueApp.activePage = 'Penjualan';
+                        }
+                    }
+
+                    // 2. Tambahkan ke keranjang belanja
+                    setTimeout(() => {
+                        if (typeof vueApp.addBySearch === 'function') {
+                            vueApp.addBySearch(product);
+                        }
+                    }, 100);
                 }
             } else {
-                alert(`⚠️ Produk dengan kode "${scannedCode}" tidak ditemukan!`);
+                // PRODUK TIDAK DITEMUKAN -> TAMPILKAN KONFIRMASI
+                promptTambahProduk(scannedCode, vueApp);
             }
         } catch (err) {
             console.error("Gagal memproses scanner:", err);
         }
+    }
+}
+
+// -------------------------------------------------------------
+// HELPER FUNCTIONS
+// -------------------------------------------------------------
+
+// Helper untuk mengisi kolom barcode pada halaman Tambah Produk
+function isiInputBarcode(code) {
+    const inputBarcode = document.querySelector('input[placeholder*="Scan atau manual"]');
+    if (inputBarcode) {
+        inputBarcode.value = code;
+        inputBarcode.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+}
+
+// Helper untuk menampilkan dialog konfirmasi jika produk belum ada
+function promptTambahProduk(scannedCode, vueApp) {
+    const mauTambah = confirm(
+        `⚠️ Produk dengan kode "${scannedCode}" belum terdaftar!\n\n` +
+        `Apakah Anda ingin menambahkan produk baru dengan kode ini?`
+    );
+
+    if (mauTambah && vueApp) {
+        // Pindah ke halaman Tambah Produk
+        if (typeof vueApp.selectPage === 'function') {
+            vueApp.selectPage('Tambah Produk');
+        } else {
+            vueApp.activePage = 'Tambah Produk';
+        }
+
+        // Isikan kode barcode ke input form secara otomatis
+        setTimeout(() => {
+            isiInputBarcode(scannedCode);
+            const inputNama = document.querySelector('input[placeholder*="Indomie"]');
+            if (inputNama) inputNama.focus();
+        }, 150);
     }
 }
