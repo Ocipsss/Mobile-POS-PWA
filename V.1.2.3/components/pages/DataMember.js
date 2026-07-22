@@ -3,7 +3,7 @@ const PageDataMember = {
     setup() {
         const members = Vue.ref([]);
         const showModal = Vue.ref(false);
-        const newMember = Vue.ref({ name: '', address: '' }); // ID dihapus dari form input
+        const newMember = Vue.ref({ name: '', address: '' });
 
         const formatRupiah = (val) => {
             if (!val) return 'Rp 0';
@@ -24,8 +24,41 @@ const PageDataMember = {
         };
 
         const loadMembers = async () => {
-            const data = await db.members.toArray();
-            members.value = data.sort((a, b) => (b.total_spending || 0) - (a.total_spending || 0));
+            try {
+                // 1. Ambil semua data member
+                const dataMembers = await db.members.toArray();
+                
+                // 2. Ambil transaksi piutang/hutang dari Dexie atau Firebase
+                let hutangTransactions = [];
+                if (typeof fdb !== 'undefined' && navigator.onLine) {
+                    const snapshot = await fdb.ref('transactions')
+                        .orderByChild('status')
+                        .equalTo('hutang')
+                        .once('value');
+                    const data = snapshot.val();
+                    if (data) hutangTransactions = Object.values(data);
+                } else {
+                    hutangTransactions = await db.transactions.where('status').equals('hutang').toArray();
+                }
+
+                // 3. Hitung total sisa piutang per member ID
+                const piutangMap = {};
+                hutangTransactions.forEach(t => {
+                    if (t.memberId) {
+                        const sisa = Number(t.total || 0) - Number(t.amountPaid || 0);
+                        piutangMap[t.memberId] = (piutangMap[t.memberId] || 0) + Math.max(0, sisa);
+                    }
+                });
+
+                // 4. Gabungkan sisa piutang ke objek member
+                members.value = dataMembers.map(m => ({
+                    ...m,
+                    totalPiutang: piutangMap[m.id] || 0
+                })).sort((a, b) => (b.total_spending || 0) - (a.total_spending || 0));
+
+            } catch (err) {
+                console.error("Gagal memuat data member & piutang:", err);
+            }
         };
 
         const saveMember = async () => {
@@ -34,7 +67,7 @@ const PageDataMember = {
             }
             
             try {
-                const autoId = await generateUniqueId(); // Generate ID di sini
+                const autoId = await generateUniqueId();
                 
                 await db.members.add({ 
                     id: autoId,
@@ -101,14 +134,26 @@ const PageDataMember = {
                         </button>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-2 mt-1 pt-3 border-t border-gray-50">
+                    <!-- KOTAK INFORMASI KEUANGAN MEMBER (TERMASUK PIUTANG) -->
+                    <div class="grid grid-cols-3 gap-2 mt-1 pt-3 border-t border-gray-50">
                         <div class="bg-gray-50 p-2 rounded-xl">
-                            <div class="text-[8px] font-black text-gray-400 uppercase tracking-widest">Akumulasi Belanja</div>
-                            <div class="text-xs font-black text-gray-700">{{ formatRupiah(m.total_spending || 0) }}</div>
+                            <div class="text-[8px] font-black text-gray-400 uppercase tracking-widest">Total Belanja</div>
+                            <div class="text-[11px] font-black text-gray-700 truncate">{{ formatRupiah(m.total_spending || 0) }}</div>
                         </div>
+                        
                         <div class="bg-blue-50/50 p-2 rounded-xl border border-blue-100/50">
-                            <div class="text-[8px] font-black text-blue-400 uppercase tracking-widest">Poin Loyalitas</div>
-                            <div class="text-xs font-black text-blue-600">{{ m.points || 0 }} <span class="text-[8px] opacity-50">PTS</span></div>
+                            <div class="text-[8px] font-black text-blue-400 uppercase tracking-widest">Poin</div>
+                            <div class="text-[11px] font-black text-blue-600 truncate">{{ m.points || 0 }} <span class="text-[7px] opacity-50">PTS</span></div>
+                        </div>
+
+                        <!-- INDIKATOR PIUTANG -->
+                        <div :class="m.totalPiutang > 0 ? 'bg-red-50 border-red-100' : 'bg-green-50/50 border-green-100/50'" class="p-2 rounded-xl border">
+                            <div :class="m.totalPiutang > 0 ? 'text-red-400' : 'text-green-500'" class="text-[8px] font-black uppercase tracking-widest">
+                                {{ m.totalPiutang > 0 ? 'Piutang' : 'Piutang' }}
+                            </div>
+                            <div :class="m.totalPiutang > 0 ? 'text-red-600' : 'text-green-600'" class="text-[11px] font-black truncate">
+                                {{ formatRupiah(m.totalPiutang) }}
+                            </div>
                         </div>
                     </div>
                 </div>
