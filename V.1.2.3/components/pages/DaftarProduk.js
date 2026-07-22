@@ -90,9 +90,20 @@ const PageDaftarProduk = {
         };
 
         const handleOpenDetailEvent = (e) => {
-            const p = products.value.find(item => item.id === e.detail);
-            if (p) openDetail(p);
-        };
+    const target = e.detail;
+    // Cari berdasarkan ID (sama persis / beda tipe data) ATAU berdasarkan kode Barcode
+    const p = products.value.find(item => 
+        item.id == target || 
+        (item.code && item.code.trim() === String(target).trim())
+    );
+    
+    if (p) {
+        openDetail(p);
+    } else {
+        alert("Produk tidak ditemukan di daftar!");
+    }
+};
+
 
         Vue.onMounted(() => {
             loadData();

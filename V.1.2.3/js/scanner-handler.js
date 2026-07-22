@@ -1,29 +1,24 @@
 /**
  * MPP Scanner Handler (Fixed for Sinar Pagi POS)
- * Mengelola input dari scanner fisik (HID Mode)
  */
 
 let barcode = '';
 let lastKeyTime = Date.now();
 let isScanModeActive = true;
 
-// 1. Toggle Button Handler
 document.addEventListener('DOMContentLoaded', () => {
     const toggleBtn = document.getElementById('toggle-scan');
     if (toggleBtn) {
         toggleBtn.addEventListener('click', () => {
             isScanModeActive = !isScanModeActive;
             toggleBtn.style.opacity = isScanModeActive ? "1" : "0.5";
-            console.log("Scanner Mode:", isScanModeActive ? "Aktif" : "Nonaktif");
         });
     }
 });
 
-// 2. Listener Kecepatan Ketik Scanner
 document.addEventListener('keydown', (e) => {
     if (!isScanModeActive) return;
 
-    // Abaikan jika user sedang fokus mengetik manual di input/textarea
     const activeEl = document.activeElement;
     const isTypingInInput = activeEl && (
         activeEl.tagName === 'INPUT' || 
@@ -33,14 +28,13 @@ document.addEventListener('keydown', (e) => {
 
     const currentTime = Date.now();
     
-    // Reset jika jeda antar karakter > 50ms (karakter manusia)
     if (currentTime - lastKeyTime > 50) {
         barcode = '';
     }
 
     if (e.key === 'Enter') {
         if (barcode.length > 0) {
-            e.preventDefault(); // Mencegah submit form bawaan browser
+            e.preventDefault();
             handleScannerInput(barcode.trim());
             barcode = ''; 
         }
@@ -55,7 +49,6 @@ document.addEventListener('keydown', (e) => {
     lastKeyTime = currentTime;
 });
 
-// 3. Routing Input Scanner
 async function handleScannerInput(scannedCode) {
     console.log("Barcode Terdeteksi:", scannedCode);
 
@@ -69,13 +62,16 @@ async function handleScannerInput(scannedCode) {
     if (activePage === 'Daftar Produk') {
         if (typeof db !== 'undefined') {
             try {
-                // Cari produk berdasarkan KODE BARCODE
+                // Cari produk berdasarkan KODE BARCODE di IndexedDB
                 const product = await db.products.where('code').equals(scannedCode).first();
+                
                 if (product) {
-                    // Kirim ID produk ke listener DaftarProduk.js
-                    window.dispatchEvent(new CustomEvent('open-product-detail', { detail: product.id }));
+                    // Kirimkan Event dengan ID Produk
+                    window.dispatchEvent(new CustomEvent('open-product-detail', { 
+                        detail: product.id 
+                    }));
                 } else {
-                    alert(`⚠️ Produk dengan barcode "${scannedCode}" tidak ditemukan di daftar!`);
+                    alert(`⚠️ Produk dengan barcode "${scannedCode}" tidak ditemukan!`);
                 }
             } catch (err) {
                 console.error("Gagal scan di Daftar Produk:", err);
@@ -97,7 +93,7 @@ async function handleScannerInput(scannedCode) {
     }
 
     // -------------------------------------------------------------
-    // C. JIKA DI HALAMAN "PENJUALAN" / KASIR (DEFAULT)
+    // C. JIKA DI HALAMAN "PENJUALAN" / KASIR
     // -------------------------------------------------------------
     if (typeof db !== 'undefined') {
         try {
